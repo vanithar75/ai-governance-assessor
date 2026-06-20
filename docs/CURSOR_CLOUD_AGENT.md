@@ -377,8 +377,71 @@ Work through in order; stop when agents start successfully.
 
 ---
 
+## If nothing works
+
+If you completed the [step-by-step fix checklist](#step-by-step-fix-checklist-after-deleting-master), the [full GitHub App reset](#full-github-app-reset-if-steps-2-9-still-fail), and the [SDK bypass](#programmatic-bypass-when-ui-is-blocked) — and Cloud Agents **still** fail with **“Could not resolve branch”**, **“Could not resolve default branch”**, **“Error loading default branch”**, or **`ERROR_GITHUB_APP_NO_ACCESS`** — stop troubleshooting this repository.
+
+**This is a known Cursor platform issue**, not something fixable from repo config. GitHub reports `default_branch: main`, only `main` exists on the remote, and `.cursor/environment.json` has no branch field. The failure happens **before** any agent VM starts, when Cursor’s backend cannot create a valid GitHub App installation token.
+
+### What Cursor staff have confirmed (2026)
+
+| Finding | Source |
+|---------|--------|
+| Stale or mismatched GitHub App installation IDs on Cursor’s backend | [Forum: branch + write access](https://forum.cursor.com/t/cloud-agents-cannot-load-default-branch-during-environment-setup-and-lose-write-access-to-github-despite-correct-app-installation-and-org-permissions/153180) |
+| Transient GitHub rate-limits briefly treated as permanent branch failures — **server-side fix merged** (retry after rollout) | [Forum: failed to determine default branch](https://forum.cursor.com/t/failed-to-determine-repository-default-branch/152319) |
+| Reinstalling the GitHub App without dashboard disconnect often does **not** reliably fix token binding | [Forum: error loading default branch](https://forum.cursor.com/t/cursor-cloud-agent-fails-with-error-loading-default-branch-during-environment-setup/154051) |
+| Repos that had the Cursor App installed before may not appear in “New environment” until backend re-registers | [Forum: app installed before](https://forum.cursor.com/t/new-environment-of-cloud-agent-cant-be-created-for-repositories-which-installed-the-cursor-github-app-before/161513) |
+| Stale secondary GitHub accounts on one Cursor login can cause persistent `ERROR_GITHUB_APP_NO_ACCESS` — may require **manual cleanup by Cursor support** | [Forum: stale GitHub account](https://forum.cursor.com/t/multi-account-issue-stale-account-in-github-intergration/153542) |
+
+**Last-resort client-side reset** (sometimes helps; often does not): uninstall the Cursor GitHub App at [github.com/settings/installations](https://github.com/settings/installations), disconnect GitHub at [cursor.com/dashboard/integrations](https://cursor.com/dashboard/integrations), clear browser cookies for `cursor.com` and `github.com`, reconnect in an incognito window, reinstall the app with **`ai-governance-assessor`** in scope.
+
+### Escalate to Cursor support
+
+**Email:** [hi@cursor.com](mailto:hi@cursor.com)
+
+Copy the template below. Replace placeholders; attach a screenshot of the failed run if possible.
+
+```text
+Subject: Cloud Agent — Could not resolve branch / ERROR_GITHUB_APP_NO_ACCESS
+
+Repository: https://github.com/vanithar75/ai-governance-assessor
+Default branch (GitHub API): main (verified — only branch on remote; master deleted)
+Cursor account email: [YOUR CURSOR LOGIN EMAIL]
+GitHub username: vanithar75
+
+Error message (exact text):
+[PASTE FULL ERROR — e.g. "Could not resolve default branch" or ERROR_GITHUB_APP_NO_ACCESS / "Failed to create installation access token"]
+
+Failed run Request ID (from cursor.com/agents URL or run details):
+[REQUEST_ID — e.g. from URL query or run page]
+
+Steps already tried:
+- GitHub default branch confirmed main; git ls-remote shows main only
+- Deleted legacy master branch on GitHub
+- Reconnected GitHub at cursor.com/dashboard/integrations (disconnect → connect)
+- Reinstalled Cursor GitHub App with ai-governance-assessor selected, read+write
+- Set Cloud Agent defaults: repo vanithar75/ai-governance-assessor, Base branch main
+- Started agent from cursor.com/agents with branch typed manually as main
+- Full GitHub App uninstall + dashboard disconnect + reinstall
+- [ADD ANY OTHER STEPS YOU TRIED]
+
+Browser Network tab error (if captured):
+[PASTE JSON — e.g. ERROR_GITHUB_APP_NO_ACCESS, "Failed to verify existence of branch 'main'"]
+
+Please confirm whether my account has a stale GitHub App installation binding and whether manual cleanup is required.
+
+Thank you.
+```
+
+### Continue development without Cloud Agent
+
+Use **[DEVELOPMENT_WITHOUT_CLOUD_AGENT.md](./DEVELOPMENT_WITHOUT_CLOUD_AGENT.md)** for practical workflows: Cursor Desktop local agent, GitHub Codespaces, Cursor SDK with `CURSOR_API_KEY`, and Vercel deploy from GitHub.
+
+---
+
 ## Related links
 
+- [Develop without Cloud Agent](./DEVELOPMENT_WITHOUT_CLOUD_AGENT.md)
 - [Cloud environment setup](https://cursor.com/docs/cloud-agent/setup)
 - [Cloud agent dashboard settings](https://cursor.com/docs/cloud-agent/settings)
 - [Cursor SDK TypeScript](https://cursor.com/docs/sdk/typescript)

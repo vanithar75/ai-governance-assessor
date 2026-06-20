@@ -1,0 +1,66 @@
+#!/usr/bin/env tsx
+/**
+ * Example: start a Cursor Cloud Agent via SDK (not runnable as-is).
+ *
+ * 1. Copy to start-cloud-agent.ts (gitignored) or run with explicit path.
+ * 2. npm install @cursor/sdk   (or use a separate automation repo)
+ * 3. export CURSOR_API_KEY="cursor_..."   — NEVER commit the key
+ * 4. npx tsx scripts/start-cloud-agent.ts.example
+ *
+ * Requires branch main explicitly — see docs/CURSOR_CLOUD_AGENT.md
+ */
+import { Agent, CursorAgentError } from "@cursor/sdk";
+
+const REPO_URL = "https://github.com/vanithar75/ai-governance-assessor";
+const BRANCH = "main";
+
+const PROMPT = `
+Repository: vanithar75/ai-governance-assessor
+Branch: main
+
+Implement the next Sprint 3 story from Notion (RFP Customer Assessment Mode).
+Read docs/PHASE2.md, docs/PHASE1.md, and AGENTS.md.
+Verify: npm run lint, npm run build, npm run validate-standards.
+Open a PR to main when done. Do not commit secrets.
+`.trim();
+
+async function main() {
+  const apiKey = process.env.CURSOR_API_KEY;
+  if (!apiKey) {
+    console.error("Set CURSOR_API_KEY in the environment (never commit it).");
+    process.exit(1);
+  }
+
+  try {
+    const result = await Agent.prompt(PROMPT, {
+      apiKey,
+      model: { id: "composer-2.5" },
+      cloud: {
+        repos: [
+          {
+            url: REPO_URL,
+            startingRef: BRANCH,
+          },
+        ],
+        autoCreatePR: true,
+        skipReviewerRequest: true,
+      },
+    });
+
+    if (result.status === "error") {
+      console.error("Run finished with error:", result.id);
+      process.exit(2);
+    }
+
+    console.log("Status:", result.status);
+    console.log("Result:", result.result);
+  } catch (err) {
+    if (err instanceof CursorAgentError) {
+      console.error("Startup failed:", err.message, "retryable=", err.isRetryable);
+      process.exit(1);
+    }
+    throw err;
+  }
+}
+
+main();
