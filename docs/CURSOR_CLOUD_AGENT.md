@@ -297,7 +297,7 @@ These messages appear **before** the Cloud Agent VM starts — during GitHub App
 | `HEAD` symref | `refs/heads/main` |
 | Visibility | **Public** |
 | `main` protected? | **No** |
-| Commits on `main`? | **Yes** — latest `068f965…` (ancestor `0f55662…` exists) |
+| Commits on `main`? | **Yes** — latest on `main` is `be013f5…`; ancestor `0f55662…` exists |
 | `.cursor/environment.json` branch field | **Not supported** — branch is set at launch (UI, dashboard Base branch, or API `startingRef`) |
 
 ```bash
