@@ -89,3 +89,33 @@ export type VersionManifest = z.infer<typeof versionManifestSchema>;
 export type ControlDefinition = z.infer<typeof controlSchema>;
 export type SectionDefinition = z.infer<typeof sectionSchema>;
 export type StandardBundle = z.infer<typeof standardBundleSchema>;
+
+export const controlMappingTypeSchema = z.enum([
+  "equivalent",
+  "partial",
+  "related",
+  "supersedes",
+]);
+
+export const controlRefSchema = z.object({
+  framework: z.string().min(1),
+  version: z.string().min(1),
+  control_id: z.string().min(1),
+});
+
+export const crosswalkMappingSchema = z.object({
+  source: controlRefSchema,
+  target: controlRefSchema,
+  mapping_type: controlMappingTypeSchema.default("related"),
+  notes: z.string().optional(),
+});
+
+export const crosswalkFileSchema = z.object({
+  name: z.string().optional(),
+  description: z.string().optional(),
+  mappings: z.array(crosswalkMappingSchema).min(1),
+});
+
+export type ControlRef = z.infer<typeof controlRefSchema>;
+export type CrosswalkMapping = z.infer<typeof crosswalkMappingSchema>;
+export type CrosswalkFile = z.infer<typeof crosswalkFileSchema>;

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Calendar, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Calendar, CheckCircle2, GitCompareArrows } from "lucide-react";
 
 import { SiteHeader } from "@/components/dashboard/site-header";
 import { Button } from "@/components/ui/button";
+import { fetchRelatedControlsForVersion } from "@/lib/control-mappings";
 import { parseFramework } from "@/lib/frameworks";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -78,6 +79,9 @@ export default async function AssessmentDetailPage({
   const report = assessment.report as AssessmentReport | null;
 
   let questionsById = new Map<string, FrameworkQuestion>();
+  let relatedControls: Awaited<
+    ReturnType<typeof fetchRelatedControlsForVersion>
+  > = [];
 
   if (assessment.framework_version_id) {
     const { data: versionRow } = await supabase
@@ -100,6 +104,13 @@ export default async function AssessmentDetailPage({
         }
       }
     }
+
+    const answeredIds = Object.keys(answers).filter((key) => key !== "__meta");
+    relatedControls = await fetchRelatedControlsForVersion(
+      supabase,
+      assessment.framework_version_id,
+      answeredIds,
+    );
   }
 
   return (
@@ -183,6 +194,52 @@ export default async function AssessmentDetailPage({
                       style={{ width: `${section.percentage}%` }}
                     />
                   </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {relatedControls.length > 0 ? (
+          <section className="mb-8 rounded-2xl border border-border/70 bg-card p-6 shadow-sm">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                <GitCompareArrows className="size-5 text-primary" />
+                Related controls in other frameworks
+              </h2>
+              <Button
+                variant="outline"
+                size="sm"
+                nativeButton={false}
+                render={<Link href="/standards/mappings" />}
+              >
+                View all mappings
+              </Button>
+            </div>
+            <div className="space-y-3">
+              {relatedControls.map((related, index) => (
+                <div
+                  key={`${related.control_id}-${related.framework_slug}-${index}`}
+                  className="rounded-xl border border-border/60 bg-background/50 p-4"
+                >
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span className="font-mono text-primary">
+                      {related.control_id}
+                    </span>
+                    <span>→</span>
+                    <span className="font-medium text-foreground">
+                      {related.framework_name}
+                    </span>
+                    <span className="rounded-full bg-muted px-2 py-0.5">
+                      {related.mapping_type}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-foreground">{related.title}</p>
+                  {related.notes ? (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {related.notes}
+                    </p>
+                  ) : null}
                 </div>
               ))}
             </div>

@@ -3,117 +3,37 @@
  * Publish standards/ YAML files to Supabase.
  *
  * Usage:
- *   npm run publish-standards -- [--dry-run] [--framework=slug] [--version=1.0]
+ *   npm run publish-standards -- [--dry-run] [--framework=slug] [--version=1.0] [--status=published]
  *
- * Requires:
+ * Requires (unless --dry-run):
  *   NEXT_PUBLIC_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
  */
-import { createClient } from "@supabase/supabase-js";
-import { config } from "dotenv";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { existsSync, readdirSync } from "node:fs";
+import { join, resolve } from "node:path";
 
 import {
   controlsFileSchema,
   frameworkMetadataSchema,
+  frameworkVersionStatusSchema,
   standardBundleSchema,
   versionManifestSchema,
   type StandardBundle,
+  type VersionManifest,
 } from "../lib/standards/schema";
-import { parse as parseYaml } from "yaml";
-
-const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-
-config({ path: join(projectRoot, ".env.local") });
-config({ path: join(projectRoot, ".env") });
-
-/**
- * REST-only scripts never open Realtime channels, but createClient still
- * constructs a RealtimeClient and resolves a WebSocket transport on init.
- * Node.js < 22 has no native WebSocket — pass a no-op transport instead of ws.
- */
-class NoopWebSocket {
-  static readonly CONNECTING = 0;
-  static readonly OPEN = 1;
-  static readonly CLOSING = 2;
-  static readonly CLOSED = 3;
-
-  readyState = NoopWebSocket.CLOSED;
-
-  constructor(_address: string | URL, _protocols?: string | string[]) {}
-
-  send(_data: unknown): void {}
-  close(_code?: number, _reason?: string): void {}
-
-  addEventListener(): void {}
-  removeEventListener(): void {}
-  dispatchEvent(): boolean {
-    return true;
-  }
-
-  onopen: (() => void) | null = null;
-  onclose: (() => void) | null = null;
-  onerror: (() => void) | null = null;
-  onmessage: ((event: { data: unknown }) => void) | null = null;
-}
-
-function createAdminClient(url: string, serviceKey: string) {
-  return createClient(url, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    realtime: {
-      transport: NoopWebSocket as unknown as typeof WebSocket,
-    },
-  });
-}
-
-function requireSupabaseEnv(): { url: string; serviceKey: string } {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const missing: string[] = [];
-
-  if (!url) missing.push("NEXT_PUBLIC_SUPABASE_URL");
-  if (!serviceKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
-
-  if (missing.length === 0) {
-    return { url: url!, serviceKey: serviceKey! };
-  }
-
-  const lines = [
-    `Missing required environment variable(s): ${missing.join(", ")}.`,
-    "",
-    `Add them to ${join(projectRoot, ".env.local")}.`,
-  ];
-
-  if (missing.includes("SUPABASE_SERVICE_ROLE_KEY")) {
-    lines.push(
-      "",
-      "SUPABASE_SERVICE_ROLE_KEY is the service_role secret — not NEXT_PUBLIC_SUPABASE_ANON_KEY.",
-      "From the Supabase dashboard:",
-      "  1. Open your project → Project Settings → API",
-      '  2. Under "Project API keys", reveal and copy the service_role key',
-      "  3. Add to .env.local: SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>",
-      "",
-      "Never commit this key or use it in client-side code.",
-    );
-  }
-
-  if (missing.includes("NEXT_PUBLIC_SUPABASE_URL")) {
-    lines.push(
-      "",
-      "NEXT_PUBLIC_SUPABASE_URL is the Project URL on the same API settings page.",
-    );
-  }
-
-  console.error(lines.join("\n"));
-  process.exit(1);
-}
+import {
+  createAdminClient,
+  loadYaml,
+  projectRoot,
+  requireSupabaseEnv,
+} from "../lib/standards/script-utils";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type CliOptions = {
   dryRun: boolean;
   framework?: string;
   version?: string;
+  status?: VersionManifest["status"];
 };
 
 function parseArgs(argv: string[]): CliOptions {
@@ -126,14 +46,13 @@ function parseArgs(argv: string[]): CliOptions {
       options.framework = arg.slice("--framework=".length);
     } else if (arg.startsWith("--version=")) {
       options.version = arg.slice("--version=".length);
+    } else if (arg.startsWith("--status=")) {
+      const status = arg.slice("--status=".length);
+      options.status = frameworkVersionStatusSchema.parse(status);
     }
   }
 
   return options;
-}
-
-function loadYaml<T>(path: string): T {
-  return parseYaml(readFileSync(path, "utf8")) as T;
 }
 
 function discoverStandards(
@@ -148,6 +67,9 @@ function discoverStandards(
 
   for (const slug of readdirSync(standardsDir, { withFileTypes: true })) {
     if (!slug.isDirectory() || slug.name.startsWith("_")) continue;
+    if (slug.name === "mappings" || slug.name === "sources" || slug.name === "drafts") {
+      continue;
+    }
     if (filter?.framework && slug.name !== filter.framework) continue;
 
     const frameworkPath = join(standardsDir, slug.name, "framework.yaml");
@@ -190,15 +112,31 @@ type PublishStats = {
   controls: number;
 };
 
+function resolveStatus(
+  manifest: VersionManifest,
+  statusOverride?: VersionManifest["status"],
+): VersionManifest["status"] {
+  return statusOverride ?? manifest.status;
+}
+
 async function publishBundle(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   bundle: StandardBundle,
   dryRun: boolean,
+  statusOverride?: VersionManifest["status"],
 ): Promise<number> {
   const { framework, manifest, controls } = bundle;
+  const status = resolveStatus(manifest, statusOverride);
   const label = `${framework.slug}@${manifest.version}`;
 
-  console.log(`\n→ ${label} (${manifest.status})`);
+  console.log(
+    `\n→ ${label} (${status}${statusOverride ? `, manifest=${manifest.status}` : ""})`,
+  );
+
+  if (status === "archived" && !statusOverride) {
+    console.log("  ⊘ skipping archived version (use --status to override)");
+    return 0;
+  }
 
   const frameworkRow = {
     ...(framework.id ? { id: framework.id } : {}),
@@ -215,7 +153,9 @@ async function publishBundle(
       (n, s) => n + s.controls.length,
       0,
     );
-    console.log(`  [dry-run] would upsert framework + version + ${controlCount} controls`);
+    console.log(
+      `  [dry-run] would upsert framework + version (${status}) + ${controlCount} controls`,
+    );
     return controlCount;
   }
 
@@ -232,15 +172,15 @@ async function publishBundle(
   const versionRow = {
     framework_id: fw.id,
     version: manifest.version,
-    status: manifest.status,
+    status,
     changelog: manifest.changelog ?? null,
     published_at:
-      manifest.status === "published"
+      status === "published"
         ? manifest.published_at ?? new Date().toISOString()
         : null,
   };
 
-  if (manifest.status === "published") {
+  if (status === "published") {
     const { error: archiveError } = await supabase
       .from("framework_versions")
       .update({ status: "archived" })
@@ -264,7 +204,7 @@ async function publishBundle(
     throw new Error(`version upsert failed for ${label}: ${fvError?.message}`);
   }
 
-  if (manifest.status === "published") {
+  if (status === "published") {
     await supabase
       .from("framework_versions")
       .update({
@@ -274,7 +214,6 @@ async function publishBundle(
       .eq("id", fv.id);
   }
 
-  // Replace controls for this version (idempotent publish)
   const { error: deleteError } = await supabase
     .from("controls")
     .delete()
@@ -321,10 +260,11 @@ async function publishBundle(
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const standardsDir = resolve("standards");
+  const standardsDir = resolve(projectRoot, "standards");
 
   console.log("AI Governance Assessor — standards publish pipeline");
   if (options.dryRun) console.log("  mode: dry-run (no database writes)");
+  if (options.status) console.log(`  status override: ${options.status}`);
 
   const bundles = discoverStandards(standardsDir, {
     framework: options.framework,
@@ -349,14 +289,14 @@ async function main() {
       }
       stats.versions += 1;
       stats.controls += await publishBundle(
-        null as unknown as ReturnType<typeof createClient>,
+        null as unknown as SupabaseClient,
         bundle,
         true,
+        options.status,
       );
     }
   } else {
     const { url, serviceKey } = requireSupabaseEnv();
-
     const supabase = createAdminClient(url, serviceKey);
 
     for (const bundle of bundles) {
@@ -365,7 +305,12 @@ async function main() {
         stats.frameworks += 1;
       }
       stats.versions += 1;
-      stats.controls += await publishBundle(supabase, bundle, false);
+      stats.controls += await publishBundle(
+        supabase,
+        bundle,
+        false,
+        options.status,
+      );
     }
   }
 

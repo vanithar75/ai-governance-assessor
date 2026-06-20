@@ -1,0 +1,136 @@
+name: NIST AI RMF ↔ ISO 42001 ↔ EU AI Act crosswalk
+description: >
+  Curated mappings between published v1.0 controls across the three
+  primary frameworks. Used to surface related requirements during assessments.
+mappings:
+  - source:
+      framework: nist-ai-rmf
+      version: "1.0"
+      control_id: gov-01
+    target:
+      framework: iso-42001
+      version: "1.0"
+      control_id: ldr-01
+    mapping_type: related
+    notes: Documented AI governance policy endorsed by leadership.
+
+  - source:
+      framework: nist-ai-rmf
+      version: "1.0"
+      control_id: gov-02
+    target:
+      framework: iso-42001
+      version: "1.0"
+      control_id: ldr-02
+    mapping_type: related
+    notes: Assigned roles and accountability for AI risk management.
+
+  - source:
+      framework: nist-ai-rmf
+      version: "1.0"
+      control_id: gov-05
+    target:
+      framework: eu-ai-act
+      version: "1.0"
+      control_id: hr-05
+    mapping_type: partial
+    notes: Third-party AI vendor due diligence aligns with supply-chain obligations for high-risk systems.
+
+  - source:
+      framework: nist-ai-rmf
+      version: "1.0"
+      control_id: map-01
+    target:
+      framework: eu-ai-act
+      version: "1.0"
+      control_id: cls-01
+    mapping_type: related
+    notes: Documented intended purpose supports risk classification under the EU AI Act.
+
+  - source:
+      framework: nist-ai-rmf
+      version: "1.0"
+      control_id: map-02
+    target:
+      framework: eu-ai-act
+      version: "1.0"
+      control_id: hr-02
+    mapping_type: related
+    notes: Harm identification supports fundamental-rights impact assessment for high-risk AI.
+
+  - source:
+      framework: nist-ai-rmf
+      version: "1.0"
+      control_id: mea-01
+    target:
+      framework: iso-42001
+      version: "1.0"
+      control_id: perf-01
+    mapping_type: related
+    notes: AI system performance and trustworthiness monitoring.
+
+  - source:
+      framework: nist-ai-rmf
+      version: "1.0"
+      control_id: mea-03
+    target:
+      framework: eu-ai-act
+      version: "1.0"
+      control_id: hr-03
+    mapping_type: partial
+    notes: Bias and fairness evaluation supports non-discrimination requirements.
+
+  - source:
+      framework: iso-42001
+      version: "1.0"
+      control_id: ctx-01
+    target:
+      framework: eu-ai-act
+      version: "1.0"
+      control_id: cls-02
+    mapping_type: related
+    notes: Organizational context and stakeholder needs inform AI system classification.
+
+  - source:
+      framework: iso-42001
+      version: "1.0"
+      control_id: pln-02
+    target:
+      framework: nist-ai-rmf
+      version: "1.0"
+      control_id: mgt-02
+    mapping_type: related
+    notes: Risk treatment planning aligns with NIST Manage function activities.
+
+  - source:
+      framework: eu-ai-act
+      version: "1.0"
+      control_id: hr-01
+    target:
+      framework: iso-42001
+      version: "1.0"
+      control_id: ops-01
+    mapping_type: partial
+    notes: High-risk risk-management system requirements map to operational controls.
+
+  - source:
+      framework: eu-ai-act
+      version: "1.0"
+      control_id: hr-04
+    target:
+      framework: nist-ai-rmf
+      version: "1.0"
+      control_id: mea-05
+    mapping_type: related
+    notes: Human oversight obligations align with NIST measurement of human-AI configuration.
+
+  - source:
+      framework: eu-ai-act
+      version: "1.0"
+      control_id: pm-01
+    target:
+      framework: nist-ai-rmf
+      version: "1.0"
+      control_id: mgt-04
+    mapping_type: related
+    notes: Post-market monitoring parallels NIST incident response and continuous improvement.

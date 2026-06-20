@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "generate-standards": "tsx scripts/generate-standards-yaml.ts",
-    "publish-standards": "tsx scripts/publish-standards.ts"
+    "publish-standards": "tsx scripts/publish-standards.ts",
+    "validate-standards": "tsx scripts/publish-standards.ts --dry-run",
+    "publish-mappings": "tsx scripts/publish-mappings.ts",
+    "ingest-sources": "tsx scripts/ingest-sources.ts",
+    "draft-control-updates": "tsx scripts/draft-control-updates.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

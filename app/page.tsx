@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AuthPanel } from "@/components/auth/auth-panel";
 import {
   AssessmentHistory,
@@ -96,6 +97,15 @@ export default async function HomePage() {
         )}
 
         <AssessmentHistory assessments={historyItems} />
+
+        <p className="mt-10 text-center text-sm text-muted-foreground">
+          <Link
+            href="/standards/mappings"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Browse cross-framework control mappings
+          </Link>
+        </p>
       </main>
     </div>
   );

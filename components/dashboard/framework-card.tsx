@@ -71,6 +71,12 @@ export function FrameworkCard({ framework }: FrameworkCardProps) {
         </p>
 
         <div className="mt-5 flex items-center gap-4 text-xs font-medium text-muted-foreground">
+          {framework.framework_version ? (
+            <>
+              <span>v{framework.framework_version}</span>
+              <span className="size-1 rounded-full bg-border" />
+            </>
+          ) : null}
           <span>{sectionCount} sections</span>
           <span className="size-1 rounded-full bg-border" />
           <span>{questionCount} questions</span>

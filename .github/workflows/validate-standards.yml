@@ -1,0 +1,31 @@
+name: Validate standards
+
+on:
+  pull_request:
+    paths:
+      - "standards/**"
+      - "lib/standards/**"
+      - "scripts/publish-standards.ts"
+      - "scripts/publish-mappings.ts"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate standards YAML (dry-run)
+        run: npm run validate-standards
+
+      - name: Validate mappings YAML (dry-run)
+        run: npm run publish-mappings -- --dry-run

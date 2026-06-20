@@ -2,12 +2,12 @@
 -- AI Governance Assessor — complete Supabase setup (paste once in SQL Editor)
 -- =============================================================================
 --
--- Combines schema.sql (bootstrap) + migration 001 (normalized frameworks).
+-- Combines schema.sql (bootstrap) + migrations 001-003 (normalized frameworks, Phase 2 lifecycle, RAG).
 -- Safe to re-run. If publish failed with missing jurisdiction column, run this.
 --
 -- After success: npm run publish-standards
 --
--- Alternative two-step: schema.sql then migrations/001_framework_versions_and_controls.sql
+-- Alternative: schema.sql then migrations/001_*.sql, 002_phase2_version_lifecycle.sql, 003_phase2_rag_ingestion.sql
 -- =============================================================================
 
 -- =============================================================================
@@ -1385,3 +1385,118 @@ GRANT USAGE ON TYPE framework_version_status TO authenticated;
 GRANT USAGE ON TYPE question_type TO authenticated;
 GRANT USAGE ON TYPE control_severity TO authenticated;
 GRANT USAGE ON TYPE control_mapping_type TO authenticated;
+
+-- =============================================================================
+-- PART 3: Phase 2 version lifecycle (migration 002)
+-- =============================================================================
+-- =============================================================================
+-- Migration 002: Latest published version per framework (Phase 2)
+-- Run after 001_framework_versions_and_controls.sql
+-- =============================================================================
+
+-- Ensure only the latest published version is exposed to the app dashboard.
+DROP VIEW IF EXISTS public.frameworks_with_questions CASCADE;
+CREATE OR REPLACE VIEW public.frameworks_with_questions
+WITH (security_invoker = true)
+AS
+SELECT
+  f.id,
+  f.slug,
+  f.name,
+  f.description,
+  f.publisher,
+  f.jurisdiction,
+  f.website_url,
+  fv.id AS framework_version_id,
+  fv.version AS framework_version,
+  public.build_questions_json(fv.id) AS questions,
+  f.created_at,
+  f.updated_at
+FROM public.frameworks f
+JOIN LATERAL (
+  SELECT fv_inner.*
+  FROM public.framework_versions fv_inner
+  WHERE fv_inner.framework_id = f.id
+    AND fv_inner.status = 'published'
+  ORDER BY
+    fv_inner.published_at DESC NULLS LAST,
+    fv_inner.created_at DESC
+  LIMIT 1
+) fv ON true;
+
+GRANT SELECT ON public.frameworks_with_questions TO authenticated;
+
+
+-- =============================================================================
+-- PART 4: RAG source documents and chunks (migration 003)
+-- =============================================================================
+-- =============================================================================
+-- Migration 003: RAG source documents and chunks (Phase 2)
+-- Run after 002_phase2_version_lifecycle.sql
+-- =============================================================================
+
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- ---------------------------------------------------------------------------
+-- source_documents
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.source_documents (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  framework_slug TEXT NOT NULL,
+  title          TEXT NOT NULL,
+  source_url     TEXT,
+  content_hash   TEXT NOT NULL,
+  ingested_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (framework_slug, content_hash)
+);
+
+CREATE INDEX IF NOT EXISTS idx_source_documents_framework_slug
+  ON public.source_documents (framework_slug);
+
+-- ---------------------------------------------------------------------------
+-- document_chunks (pgvector when available; embedding nullable for MVP)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.document_chunks (
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_document_id UUID NOT NULL REFERENCES public.source_documents (id) ON DELETE CASCADE,
+  chunk_index        INT NOT NULL,
+  content            TEXT NOT NULL,
+  embedding          vector(1536),
+  metadata           JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (source_document_id, chunk_index)
+);
+
+CREATE INDEX IF NOT EXISTS idx_document_chunks_source_document_id
+  ON public.document_chunks (source_document_id);
+
+-- Optional: add ivfflat index after embeddings are populated:
+-- CREATE INDEX idx_document_chunks_embedding ON public.document_chunks
+--   USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)
+--   WHERE embedding IS NOT NULL;
+
+-- ---------------------------------------------------------------------------
+-- Row Level Security
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.source_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.document_chunks ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Authenticated users can read source documents"
+  ON public.source_documents;
+CREATE POLICY "Authenticated users can read source documents"
+  ON public.source_documents
+  FOR SELECT
+  TO authenticated
+  USING (true);
+
+DROP POLICY IF EXISTS "Authenticated users can read document chunks"
+  ON public.document_chunks;
+CREATE POLICY "Authenticated users can read document chunks"
+  ON public.document_chunks
+  FOR SELECT
+  TO authenticated
+  USING (true);
+
+GRANT SELECT ON public.source_documents TO authenticated;
+GRANT SELECT ON public.document_chunks TO authenticated;
+
