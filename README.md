@@ -1,4 +1,18 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Governance Assessor
+
+Next.js app for presales and governance teams to assess AI use cases against NIST AI RMF, EU AI Act, ISO 42001, and related standards.
+
+| Item | Value |
+|------|-------|
+| GitHub | https://github.com/vanithar75/ai-governance-assessor |
+| Default branch | **`main`** |
+| Stack | Next.js 16 (App Router), Supabase, Tailwind, shadcn/ui |
+
+## Cursor Cloud Agents
+
+To run agents on Cursor’s hosted VMs (not local IDE only), see **[docs/CURSOR_CLOUD_AGENT.md](./docs/CURSOR_CLOUD_AGENT.md)**.
+
+If you see **“Could not resolve default branch”**, type **`main`** in the branch field and reconnect GitHub at [cursor.com/dashboard/integrations](https://cursor.com/dashboard/integrations). The repo default branch is already `main` on GitHub.
 
 ## Getting Started
 

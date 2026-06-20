@@ -7,9 +7,29 @@ Guide for running [Cursor Cloud Agents](https://cursor.com/agents) against `vani
 | Item | Value |
 |------|-------|
 | Repository | https://github.com/vanithar75/ai-governance-assessor |
-| Default branch (GitHub API) | `main` |
+| Visibility | Public |
+| Default branch (GitHub API) | **`main`** |
+| Remote branches (verified) | **`main` only** — legacy `master` removed from GitHub |
+| Remote `HEAD` symref | `refs/heads/main` |
 | Repo config | `.cursor/environment.json` → `npm ci` on startup |
 | Agent instructions | `AGENTS.md` (includes cloud-specific section) |
+
+### Verified GitHub state (June 2026)
+
+```text
+# GitHub REST API
+GET https://api.github.com/repos/vanithar75/ai-governance-assessor
+→ default_branch: "main"
+
+# Local remote check
+git ls-remote --symref origin HEAD
+→ ref: refs/heads/main  HEAD
+
+git ls-remote --heads origin
+→ refs/heads/main  (only branch on remote)
+```
+
+If Cursor still shows **“Could not resolve default branch”**, the repo metadata is correct — the failure is almost always **Cursor’s GitHub App / dashboard connection**, not a missing branch on GitHub.
 
 Verify default branch anytime:
 
@@ -28,20 +48,42 @@ PowerShell:
 
 ---
 
-## Step 1 — Connect GitHub in Cursor
+## Step 1 — Connect GitHub in Cursor (required)
 
-1. Open **https://cursor.com/dashboard** → **Cloud Agents** (or **Integrations**).
-2. Connect **GitHub** and install the **Cursor GitHub App**.
-3. Under **Repository access**, include **`vanithar75/ai-governance-assessor`** (all repos or selected repos).
-4. Confirm the repo appears in the Cloud Agents repo picker.
+Cloud Agents need GitHub connected at **cursor.com**, not only in the desktop IDE.
 
-If setup fails with **"Could not resolve default branch"** or **"Error loading default branch"**:
+### Exact click path
 
-- This is a [known Cursor issue](https://forum.cursor.com/t/cursor-cloud-agent-fails-with-error-loading-default-branch-during-environment-setup/154051) when the GitHub installation token cannot resolve the default branch.
-- **Workaround:** type **`main`** explicitly in the branch field when starting an agent — do not rely on auto-detect.
-- Reinstall the Cursor GitHub App if needed; retry later if the backend token is stale.
-- Ensure GitHub **Settings → Branches → Default branch** is **`main`** (verified via API as of June 2026).
-- This repo still has a legacy **`master`** branch; only **`main`** is the GitHub default. Prefer deleting `master` after confirming nothing references it.
+1. Sign in at **https://cursor.com/dashboard**.
+2. Open **Integrations**: **https://cursor.com/dashboard/integrations**
+3. Under **GitHub**, click **Connect** (or **Manage** if already connected).
+4. Install or configure the **Cursor GitHub App**: **https://github.com/apps/cursor**
+5. On GitHub’s install screen, choose **All repositories** or **Only select repositories** and include **`vanithar75/ai-governance-assessor`**.
+6. Grant **read and write** access (required for agents to push branches and open PRs).
+7. Return to **https://cursor.com/dashboard/cloud-agents** → confirm the repo appears in the repository picker.
+
+### Confirm GitHub repo default (optional sanity check)
+
+On GitHub: **Repository → Settings → General → Default branch** should show **`main`**.
+
+Direct link: **https://github.com/vanithar75/ai-governance-assessor/settings**
+
+If it ever shows `master`, change it to **`main`** (Save). As of June 2026 the API already reports `main`; no `gh` CLI needed.
+
+### If you see “Could not resolve default branch”
+
+This is a [known Cursor backend issue](https://forum.cursor.com/t/cursor-cloud-agent-fails-with-error-loading-default-branch-during-environment-setup/154051): the GitHub installation token sometimes fails to resolve the default branch during environment setup — **even when GitHub’s default is correct**.
+
+| Fix | Action |
+|-----|--------|
+| **1. Type branch manually** | In agent start or environment setup, enter **`main`** — never leave the branch field blank. |
+| **2. Reconnect dashboard GitHub** | **https://cursor.com/dashboard/integrations** → Disconnect GitHub → Connect again (not the same as only reinstalling on GitHub). |
+| **3. Reinstall GitHub App** | **https://github.com/settings/installations** → Cursor → Configure → ensure **`ai-governance-assessor`** is in scope with write access. |
+| **4. Set dashboard defaults** | **https://cursor.com/dashboard/cloud-agents** → Default settings → Base branch = **`main`**, Default repository = **`vanithar75/ai-governance-assessor`**. |
+| **5. Retry later** | Transient GitHub API / token issues sometimes clear after minutes or hours. |
+| **6. Contact support** | Copy the **Request ID** from a failed run URL on **https://cursor.com/agents** and email support. |
+
+**Not the cause (verified for this repo):** missing README, wrong default branch on GitHub, or legacy `master` branch — remote has **`main` only**.
 
 ---
 
@@ -244,7 +286,7 @@ See [Cloud Agents API endpoints](https://cursor.com/docs/cloud-agent/api/endpoin
 
 | Symptom | Likely cause | Action |
 |---------|--------------|--------|
-| Could not resolve default branch | Cursor GitHub token / stale `master` vs `main` | Type **`main`** manually; reconnect GitHub App |
+| Could not resolve default branch | Cursor GitHub App token / dashboard not connected (repo default is already `main`) | Type **`main`** manually; reconnect at [dashboard/integrations](https://cursor.com/dashboard/integrations); reinstall [Cursor GitHub App](https://github.com/apps/cursor) |
 | Environment setup fails | Missing secrets or failed `npm ci` | Add Supabase secrets; check agent setup logs |
 | Agent cannot push | GitHub App lacks write access | Reinstall app with repo write permission |
 | `npm run build` fails in cloud | Missing env vars | Add `NEXT_PUBLIC_*` secrets |
