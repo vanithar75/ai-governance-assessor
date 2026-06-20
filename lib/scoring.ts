@@ -5,8 +5,14 @@ import type {
   FrameworkSection,
   FrameworkQuestion,
   QuestionAnswer,
+  RfpGapItem,
+  RfpNonComplianceItem,
+  RfpRecommendedAction,
+  RfpSummary,
   SectionScore,
 } from "@/lib/types";
+
+export const RFP_GAP_THRESHOLD_PERCENT = 60;
 
 function isAnswered(question: FrameworkQuestion, answer?: QuestionAnswer) {
   if (!answer || answer.value === undefined || answer.value === "") {
@@ -98,10 +104,141 @@ export function calculateAssessmentScore(
   return Math.round((totalScore / maxScore) * 100);
 }
 
+function isLowScaleAnswer(
+  question: FrameworkQuestion,
+  answer?: QuestionAnswer,
+): boolean {
+  if (question.type !== "scale" || !question.options?.length || !answer) {
+    return false;
+  }
+
+  const index =
+    typeof answer.value === "number"
+      ? answer.value
+      : question.options.indexOf(String(answer.value));
+
+  if (index < 0) {
+    return false;
+  }
+
+  const maxIndex = question.options.length - 1;
+  if (maxIndex <= 0) {
+    return index === 0;
+  }
+
+  return index / maxIndex <= 0.25;
+}
+
+function isNonCompliantAnswer(
+  question: FrameworkQuestion,
+  answer?: QuestionAnswer,
+): boolean {
+  if (!isAnswered(question, answer)) {
+    return false;
+  }
+
+  if (question.type === "yes_no") {
+    return answer?.value === false;
+  }
+
+  if (question.type === "scale") {
+    return isLowScaleAnswer(question, answer);
+  }
+
+  return false;
+}
+
+export function buildRfpSummary(
+  questions: FrameworkQuestions,
+  answers: AssessmentAnswers,
+  sectionScores: SectionScore[],
+  thresholdPercent = RFP_GAP_THRESHOLD_PERCENT,
+): RfpSummary {
+  const highRiskGaps: RfpGapItem[] = sectionScores
+    .filter((section) => section.percentage < thresholdPercent)
+    .map((section) => ({
+      sectionId: section.sectionId,
+      sectionTitle: section.title,
+      percentage: section.percentage,
+    }))
+    .sort((a, b) => a.percentage - b.percentage);
+
+  const nonComplianceFlags: RfpNonComplianceItem[] = [];
+
+  for (const section of questions.sections) {
+    for (const question of section.questions) {
+      if (!question.required) {
+        continue;
+      }
+
+      const answer = answers[question.id];
+      if (!isNonCompliantAnswer(question, answer)) {
+        continue;
+      }
+
+      let reason = "Required control not met";
+      if (question.type === "yes_no") {
+        reason = "Required question answered No";
+      } else if (question.type === "scale") {
+        const optionIndex =
+          typeof answer?.value === "number"
+            ? answer.value
+            : question.options?.indexOf(String(answer?.value)) ?? -1;
+        const optionLabel =
+          optionIndex >= 0
+            ? question.options?.[optionIndex]
+            : String(answer?.value);
+        reason = `Low maturity rating: ${optionLabel ?? "lowest tier"}`;
+      }
+
+      nonComplianceFlags.push({
+        questionId: question.id,
+        questionText: question.text,
+        sectionTitle: section.title,
+        reason,
+      });
+    }
+  }
+
+  const recommendedActions: RfpRecommendedAction[] = [];
+
+  for (const gap of highRiskGaps) {
+    recommendedActions.push({
+      priority: gap.percentage < 40 ? "high" : "medium",
+      action: `Address gaps in "${gap.sectionTitle}" (currently ${gap.percentage}%) with a targeted remediation plan and evidence collection before RFP submission.`,
+      relatedSections: [gap.sectionTitle],
+    });
+  }
+
+  for (const flag of nonComplianceFlags.slice(0, 8)) {
+    recommendedActions.push({
+      priority: "high",
+      action: `Resolve non-compliance on "${flag.questionText.slice(0, 80)}${flag.questionText.length > 80 ? "…" : ""}" — ${flag.reason.toLowerCase()}. Document compensating controls or a committed remediation timeline for the RFP appendix.`,
+      relatedSections: [flag.sectionTitle],
+    });
+  }
+
+  if (recommendedActions.length === 0) {
+    recommendedActions.push({
+      priority: "medium",
+      action:
+        "Maintain current controls and attach supporting evidence (policies, audit reports, architecture diagrams) to strengthen the RFP response.",
+    });
+  }
+
+  return {
+    highRiskGaps,
+    nonComplianceFlags,
+    recommendedActions,
+    thresholdPercent,
+  };
+}
+
 export function buildAssessmentReport(
   frameworkName: string,
   questions: FrameworkQuestions,
   answers: AssessmentAnswers,
+  options?: { includeRfpSummary?: boolean },
 ): AssessmentReport {
   const allQuestions = questions.sections.flatMap((section) => section.questions);
   const requiredQuestions = allQuestions.filter((question) => question.required);
@@ -140,6 +277,9 @@ export function buildAssessmentReport(
     answeredQuestions,
     requiredQuestions: requiredQuestions.length,
     requiredAnswered,
+    ...(options?.includeRfpSummary
+      ? { rfpSummary: buildRfpSummary(questions, answers, sectionScores) }
+      : {}),
   };
 }
 

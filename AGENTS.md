@@ -29,7 +29,7 @@ Do **not** commit secrets. Add these in the Cursor Secrets tab for the environme
 
 ### Branch
 
-Always start cloud agents from branch **`main`**. If the dashboard shows "Could not resolve default branch", type `main` explicitly in the branch field — do not leave it blank.
+Always start cloud agents from branch **`main`**. If the dashboard shows **"Could not resolve branch"** or **"Could not resolve default branch"**, the GitHub repo is fine (`main` only) — reconnect GitHub at https://cursor.com/dashboard/integrations and type `main` explicitly in the branch field. See `docs/CURSOR_CLOUD_AGENT.md` troubleshooting.
 
 ### Verify before opening a PR
 

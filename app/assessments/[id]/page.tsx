@@ -3,13 +3,16 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Calendar, CheckCircle2, GitCompareArrows } from "lucide-react";
 
 import { SiteHeader } from "@/components/dashboard/site-header";
+import { RfpSummaryPanel } from "@/components/assessment/rfp-summary-panel";
 import { Button } from "@/components/ui/button";
 import { fetchRelatedControlsForVersion } from "@/lib/control-mappings";
 import { parseFramework } from "@/lib/frameworks";
 import { createClient } from "@/lib/supabase/server";
 import type {
   AssessmentAnswers,
+  AssessmentMode,
   AssessmentReport,
+  CustomerProfile,
   FrameworkQuestion,
   QuestionAnswer,
 } from "@/lib/types";
@@ -61,7 +64,7 @@ export default async function AssessmentDetailPage({
   const { data: assessment, error } = await supabase
     .from("assessments_with_framework")
     .select(
-      "id, framework_id, framework_version_id, framework_name, framework_version, status, answers, score, report, created_at, updated_at",
+      "id, framework_id, framework_version_id, framework_name, framework_version, status, answers, score, report, assessment_mode, customer_profile, created_at, updated_at",
     )
     .eq("id", id)
     .eq("user_id", user.id)
@@ -77,6 +80,10 @@ export default async function AssessmentDetailPage({
 
   const answers = assessment.answers as AssessmentAnswers;
   const report = assessment.report as AssessmentReport | null;
+  const assessmentMode = (assessment.assessment_mode ??
+    "internal") as AssessmentMode;
+  const customerProfile = assessment.customer_profile as CustomerProfile | null;
+  const isCustomerMode = assessmentMode === "customer";
 
   let questionsById = new Map<string, FrameworkQuestion>();
   let relatedControls: Awaited<
@@ -138,9 +145,12 @@ export default async function AssessmentDetailPage({
                     : ""}
                 </p>
                 <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-                  Assessment report
+                  {isCustomerMode ? "Customer RFP assessment report" : "Assessment report"}
                 </h1>
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-2.5 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-300">
+                    {isCustomerMode ? "Customer RFP" : "Internal"}
+                  </span>
                   <span className="inline-flex items-center gap-1.5">
                     <Calendar className="size-4" />
                     {formatDate(report?.completedAt ?? assessment.updated_at)}
@@ -172,6 +182,15 @@ export default async function AssessmentDetailPage({
           </div>
         </div>
 
+        {isCustomerMode && report?.rfpSummary ? (
+          <section className="mb-8">
+            <RfpSummaryPanel
+              summary={report.rfpSummary}
+              customerProfile={customerProfile}
+            />
+          </section>
+        ) : null}
+
         {report?.sectionScores?.length ? (
           <section className="mb-8 rounded-2xl border border-border/70 bg-card p-6 shadow-sm">
             <h2 className="mb-4 text-lg font-semibold text-foreground">
@@ -200,7 +219,7 @@ export default async function AssessmentDetailPage({
           </section>
         ) : null}
 
-        {relatedControls.length > 0 ? (
+        {relatedControls.length > 0 && !isCustomerMode ? (
           <section className="mb-8 rounded-2xl border border-border/70 bg-card p-6 shadow-sm">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
@@ -260,9 +279,11 @@ export default async function AssessmentDetailPage({
                     key={questionId}
                     className="rounded-xl border border-border/60 bg-background/50 p-4"
                   >
-                    <p className="font-mono text-xs text-muted-foreground">
-                      {questionId}
-                    </p>
+                    {!isCustomerMode ? (
+                      <p className="font-mono text-xs text-muted-foreground">
+                        {questionId}
+                      </p>
+                    ) : null}
                     <p className="mt-1 text-sm font-medium text-foreground">
                       {question?.text ?? "Question"}
                     </p>

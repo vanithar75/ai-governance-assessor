@@ -15,6 +15,7 @@ type QuestionFieldProps = {
   answer?: QuestionAnswer;
   assessmentId?: string;
   onChange: (answer: QuestionAnswer) => void;
+  customerMode?: boolean;
 };
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -24,6 +25,7 @@ export function QuestionField({
   answer,
   assessmentId,
   onChange,
+  customerMode = false,
 }: QuestionFieldProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -107,16 +109,22 @@ export function QuestionField({
   return (
     <div className="rounded-xl border border-border/70 bg-card p-5 shadow-sm">
       <div className="mb-4 space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
-            {question.id}
-          </span>
-          {question.required ? (
-            <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-              Required
+        {!customerMode ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
+              {question.id}
             </span>
-          ) : null}
-        </div>
+            {question.required ? (
+              <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                Required
+              </span>
+            ) : null}
+          </div>
+        ) : question.required ? (
+          <span className="inline-flex rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+            Required
+          </span>
+        ) : null}
         <p className="text-base font-medium leading-7 text-foreground">
           {question.text}
         </p>
@@ -154,7 +162,7 @@ export function QuestionField({
           htmlFor={`${question.id}-notes`}
           className="mb-2 block text-xs font-medium text-muted-foreground"
         >
-          Notes (optional)
+          {customerMode ? "Additional context (optional)" : "Notes (optional)"}
         </label>
         <textarea
           id={`${question.id}-notes`}
@@ -173,90 +181,96 @@ export function QuestionField({
             });
           }}
           rows={2}
-          placeholder="Add context, evidence links, or remediation notes..."
+          placeholder={
+            customerMode
+              ? "Add any relevant context for this response..."
+              : "Add context, evidence links, or remediation notes..."
+          }
           className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/30"
         />
       </div>
 
-      <div className="mt-4 border-t border-border/60 pt-4">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <label className="text-xs font-medium text-muted-foreground">
-            Evidence attachment (optional)
-          </label>
-          {!assessmentId ? (
-            <span className="text-[11px] text-muted-foreground">
-              Answer a question to enable uploads
-            </span>
+      {!customerMode ? (
+        <div className="mt-4 border-t border-border/60 pt-4">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <label className="text-xs font-medium text-muted-foreground">
+              Evidence attachment (optional)
+            </label>
+            {!assessmentId ? (
+              <span className="text-[11px] text-muted-foreground">
+                Answer a question to enable uploads
+              </span>
+            ) : null}
+          </div>
+
+          {answer?.evidence ? (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <Paperclip className="size-4 shrink-0 text-muted-foreground" />
+                {answer.evidence.url ? (
+                  <a
+                    href={answer.evidence.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="truncate text-sm text-primary hover:underline"
+                  >
+                    {answer.evidence.name}
+                  </a>
+                ) : (
+                  <span className="truncate text-sm text-foreground">
+                    {answer.evidence.name}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={removeEvidence}
+                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label="Remove evidence"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          ) : (
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.csv,.doc,.docx"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) {
+                    void handleFileSelect(file);
+                  }
+                }}
+              />
+              <button
+                type="button"
+                disabled={!assessmentId || isUploading}
+                onClick={() => fileInputRef.current?.click()}
+                className={cn(
+                  "flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm transition-colors",
+                  assessmentId
+                    ? "hover:border-primary/40 hover:bg-muted/40"
+                    : "cursor-not-allowed opacity-60",
+                )}
+              >
+                {isUploading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <FileUp className="size-4" />
+                )}
+                {isUploading ? "Uploading..." : "Upload evidence file"}
+              </button>
+            </div>
+          )}
+
+          {uploadError ? (
+            <p className="mt-2 text-xs text-destructive">{uploadError}</p>
           ) : null}
         </div>
-
-        {answer?.evidence ? (
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <Paperclip className="size-4 shrink-0 text-muted-foreground" />
-              {answer.evidence.url ? (
-                <a
-                  href={answer.evidence.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="truncate text-sm text-primary hover:underline"
-                >
-                  {answer.evidence.name}
-                </a>
-              ) : (
-                <span className="truncate text-sm text-foreground">
-                  {answer.evidence.name}
-                </span>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={removeEvidence}
-              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              aria-label="Remove evidence"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
-        ) : (
-          <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.csv,.doc,.docx"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) {
-                  void handleFileSelect(file);
-                }
-              }}
-            />
-            <button
-              type="button"
-              disabled={!assessmentId || isUploading}
-              onClick={() => fileInputRef.current?.click()}
-              className={cn(
-                "flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm transition-colors",
-                assessmentId
-                  ? "hover:border-primary/40 hover:bg-muted/40"
-                  : "cursor-not-allowed opacity-60",
-              )}
-            >
-              {isUploading ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <FileUp className="size-4" />
-              )}
-              {isUploading ? "Uploading..." : "Upload evidence file"}
-            </button>
-          </div>
-        )}
-
-        {uploadError ? (
-          <p className="mt-2 text-xs text-destructive">{uploadError}</p>
-        ) : null}
-      </div>
+      ) : null}
     </div>
   );
 }

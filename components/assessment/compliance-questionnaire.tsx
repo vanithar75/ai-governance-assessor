@@ -22,6 +22,8 @@ import type {
   AssessmentAnswers,
   AssessmentDraft,
   AssessmentReport,
+  AssessmentSessionConfig,
+  CustomerProfile,
   Framework,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -29,6 +31,7 @@ import { cn } from "@/lib/utils";
 type ComplianceQuestionnaireProps = {
   framework: Framework;
   initialDraft?: AssessmentDraft | null;
+  sessionConfig: AssessmentSessionConfig;
 };
 
 type DraftMeta = {
@@ -49,8 +52,14 @@ function readMeta(answers: AssessmentAnswers): DraftMeta | undefined {
 export function ComplianceQuestionnaire({
   framework,
   initialDraft,
+  sessionConfig,
 }: ComplianceQuestionnaireProps) {
   const sections = framework.questions.sections;
+  const isCustomerMode = sessionConfig.assessmentMode === "customer";
+  const customerProfile: CustomerProfile | null =
+    sessionConfig.customerProfile ??
+    initialDraft?.customer_profile ??
+    null;
   const [showResumePrompt, setShowResumePrompt] = useState(
     Boolean(initialDraft),
   );
@@ -110,6 +119,8 @@ export function ComplianceQuestionnaire({
         nextAnswers,
         framework.framework_version_id,
         step,
+        sessionConfig.assessmentMode,
+        customerProfile,
       );
 
       if (response.error) {
@@ -122,7 +133,7 @@ export function ComplianceQuestionnaire({
       }
       setSaveState("saved");
     },
-    [framework.framework_version_id, framework.id],
+    [customerProfile, framework.framework_version_id, framework.id, sessionConfig.assessmentMode],
   );
 
   const scheduleSave = useCallback(
@@ -202,6 +213,8 @@ export function ComplianceQuestionnaire({
         answers,
         framework.framework_version_id,
         assessmentId,
+        sessionConfig.assessmentMode,
+        customerProfile,
       );
 
       if (response.error) {
@@ -246,6 +259,8 @@ export function ComplianceQuestionnaire({
         score={result.score}
         report={result.report}
         assessmentId={result.assessmentId}
+        isCustomerMode={isCustomerMode}
+        customerProfile={customerProfile}
       />
     );
   }
@@ -264,6 +279,34 @@ export function ComplianceQuestionnaire({
 
   return (
     <div className="space-y-8">
+      {isCustomerMode && customerProfile ? (
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 px-5 py-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-primary">
+            Customer RFP assessment
+          </p>
+          <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+            <span>
+              <span className="text-muted-foreground">Company: </span>
+              <span className="font-medium text-foreground">
+                {customerProfile.companyName}
+              </span>
+            </span>
+            <span>
+              <span className="text-muted-foreground">RFP: </span>
+              <span className="font-medium text-foreground">
+                {customerProfile.rfpReference}
+              </span>
+            </span>
+            <span>
+              <span className="text-muted-foreground">Industry: </span>
+              <span className="font-medium text-foreground">
+                {customerProfile.industry}
+              </span>
+            </span>
+          </div>
+        </div>
+      ) : null}
+
       <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-sm">
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -350,6 +393,7 @@ export function ComplianceQuestionnaire({
               answer={answers[question.id]}
               assessmentId={assessmentId}
               onChange={(value) => updateAnswer(question.id, value)}
+              customerMode={isCustomerMode}
             />
           </div>
         ))}

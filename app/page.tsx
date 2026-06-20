@@ -8,7 +8,7 @@ import { FrameworkGrid } from "@/components/dashboard/framework-grid";
 import { SiteHeader } from "@/components/dashboard/site-header";
 import { parseFramework } from "@/lib/frameworks";
 import { createClient } from "@/lib/supabase/server";
-import type { AssessmentStatus } from "@/lib/types";
+import type { AssessmentMode, AssessmentStatus } from "@/lib/types";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -37,7 +37,7 @@ export default async function HomePage() {
     supabase
       .from("assessments_with_framework")
       .select(
-        "id, framework_id, framework_name, framework_version, status, score, updated_at",
+        "id, framework_id, framework_name, framework_version, status, score, updated_at, assessment_mode, customer_profile",
       )
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false })
@@ -53,6 +53,8 @@ export default async function HomePage() {
       status: row.status as AssessmentStatus,
       score: row.score,
       updated_at: row.updated_at,
+      assessment_mode: (row.assessment_mode ?? "internal") as AssessmentMode,
+      customer_profile: row.customer_profile as AssessmentHistoryItem["customer_profile"],
     }),
   );
 

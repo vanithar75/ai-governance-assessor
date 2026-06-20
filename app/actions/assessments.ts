@@ -11,7 +11,9 @@ import { createClient } from "@/lib/supabase/server";
 import type {
   AssessmentAnswers,
   AssessmentDraft,
+  AssessmentMode,
   AssessmentStatus,
+  CustomerProfile,
   FrameworkQuestions,
 } from "@/lib/types";
 
@@ -35,7 +37,9 @@ async function findActiveDraft(
 ) {
   let query = supabase
     .from("assessments")
-    .select("id, answers, status, updated_at")
+    .select(
+      "id, answers, status, updated_at, assessment_mode, customer_profile",
+    )
     .eq("user_id", userId)
     .in("status", ACTIVE_DRAFT_STATUSES);
 
@@ -84,6 +88,8 @@ export async function getAssessmentDraft(
       answers: data.answers as AssessmentAnswers,
       status: data.status as AssessmentStatus,
       updated_at: data.updated_at,
+      assessment_mode: (data.assessment_mode ?? "internal") as AssessmentMode,
+      customer_profile: (data.customer_profile as CustomerProfile | null) ?? null,
     },
   };
 }
@@ -93,6 +99,8 @@ export async function saveAssessmentDraft(
   answers: AssessmentAnswers,
   frameworkVersionId?: string,
   currentStep?: number,
+  assessmentMode: AssessmentMode = "internal",
+  customerProfile?: CustomerProfile | null,
 ) {
   const supabase = await createClient();
   const {
@@ -126,6 +134,9 @@ export async function saveAssessmentDraft(
       .update({
         answers: answersWithMeta,
         status,
+        assessment_mode: assessmentMode,
+        customer_profile:
+          assessmentMode === "customer" ? (customerProfile ?? null) : null,
       })
       .eq("id", existing.id)
       .eq("user_id", user.id)
@@ -149,6 +160,9 @@ export async function saveAssessmentDraft(
       framework_version_id: frameworkVersionId ?? null,
       status,
       answers: answersWithMeta,
+      assessment_mode: assessmentMode,
+      customer_profile:
+        assessmentMode === "customer" ? (customerProfile ?? null) : null,
     })
     .select("id")
     .single();
@@ -230,6 +244,8 @@ export async function submitAssessment(
   answers: AssessmentAnswers,
   frameworkVersionId?: string,
   assessmentId?: string,
+  assessmentMode: AssessmentMode = "internal",
+  customerProfile?: CustomerProfile | null,
 ) {
   const supabase = await createClient();
   const {
@@ -252,7 +268,12 @@ export async function submitAssessment(
   }
 
   const score = calculateAssessmentScore(questions, answerPayload);
-  const report = buildAssessmentReport(frameworkName, questions, answerPayload);
+  const report = buildAssessmentReport(
+    frameworkName,
+    questions,
+    answerPayload,
+    { includeRfpSummary: assessmentMode === "customer" },
+  );
 
   let targetId = assessmentId;
 
@@ -274,6 +295,9 @@ export async function submitAssessment(
         answers: answerPayload,
         score,
         report,
+        assessment_mode: assessmentMode,
+        customer_profile:
+          assessmentMode === "customer" ? (customerProfile ?? null) : null,
       })
       .eq("id", targetId)
       .eq("user_id", user.id)
@@ -299,6 +323,9 @@ export async function submitAssessment(
       answers: answerPayload,
       score,
       report,
+      assessment_mode: assessmentMode,
+      customer_profile:
+        assessmentMode === "customer" ? (customerProfile ?? null) : null,
     })
     .select("id")
     .single();

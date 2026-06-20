@@ -57,6 +57,17 @@ export function DraftResumePrompt({
       </h2>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
         You have a saved draft last updated {formatDate(draft.updated_at)}.
+        {draft.assessment_mode === "customer" && draft.customer_profile ? (
+          <>
+            {" "}
+            Customer RFP for {draft.customer_profile.companyName} (
+            {draft.customer_profile.rfpReference}).
+          </>
+        ) : draft.assessment_mode === "customer" ? (
+          " Customer RFP mode."
+        ) : (
+          " Internal assessment mode."
+        )}{" "}
         Resume to continue where you left off, or start fresh to discard the
         draft.
       </p>

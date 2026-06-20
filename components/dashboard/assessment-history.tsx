@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Clock, FileText } from "lucide-react";
 
-import type { AssessmentStatus } from "@/lib/types";
+import type { AssessmentMode, AssessmentStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export type AssessmentHistoryItem = {
@@ -12,6 +12,11 @@ export type AssessmentHistoryItem = {
   status: AssessmentStatus;
   score: number | null;
   updated_at: string;
+  assessment_mode: AssessmentMode;
+  customer_profile: {
+    companyName?: string;
+    rfpReference?: string;
+  } | null;
 };
 
 type AssessmentHistoryProps = {
@@ -30,6 +35,16 @@ const statusStyles: Record<AssessmentStatus, string> = {
   in_progress: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
   completed: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   archived: "bg-muted text-muted-foreground",
+};
+
+const modeLabels: Record<AssessmentMode, string> = {
+  internal: "Internal",
+  customer: "Customer RFP",
+};
+
+const modeStyles: Record<AssessmentMode, string> = {
+  internal: "bg-muted text-muted-foreground",
+  customer: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300",
 };
 
 function formatDate(iso: string) {
@@ -68,7 +83,7 @@ export function AssessmentHistory({ assessments }: AssessmentHistoryProps) {
       <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
         <div className="hidden grid-cols-[1.5fr_1fr_0.75fr_0.75fr_0.5fr] gap-4 border-b border-border/70 px-5 py-3 text-xs font-medium uppercase tracking-wide text-muted-foreground md:grid">
           <span>Framework</span>
-          <span>Status</span>
+          <span>Mode / status</span>
           <span>Score</span>
           <span>Updated</span>
           <span />
@@ -90,9 +105,23 @@ export function AssessmentHistory({ assessments }: AssessmentHistoryProps) {
                       Version {item.framework_version}
                     </p>
                   ) : null}
+                  {item.assessment_mode === "customer" &&
+                  item.customer_profile?.companyName ? (
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {item.customer_profile.companyName}
+                    </p>
+                  ) : null}
                 </div>
 
-                <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={cn(
+                      "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
+                      modeStyles[item.assessment_mode ?? "internal"],
+                    )}
+                  >
+                    {modeLabels[item.assessment_mode ?? "internal"]}
+                  </span>
                   <span
                     className={cn(
                       "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",

@@ -85,7 +85,7 @@ export function FrameworkCard({ framework }: FrameworkCardProps) {
         <Button
           className="mt-6 w-full"
           nativeButton={false}
-          render={<Link href={`/assess/${framework.id}`} />}
+          render={<Link href={`/assess/${framework.id}/start`} />}
         >
           Start assessment
           <ArrowRight />

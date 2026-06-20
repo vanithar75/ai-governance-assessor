@@ -56,6 +56,41 @@ export type AssessmentStatus =
   | "completed"
   | "archived";
 
+export type AssessmentMode = "internal" | "customer";
+
+export type CustomerProfile = {
+  companyName: string;
+  rfpReference: string;
+  industry: string;
+  contactEmail?: string;
+};
+
+export type RfpGapItem = {
+  sectionId: string;
+  sectionTitle: string;
+  percentage: number;
+};
+
+export type RfpNonComplianceItem = {
+  questionId: string;
+  questionText: string;
+  sectionTitle: string;
+  reason: string;
+};
+
+export type RfpRecommendedAction = {
+  priority: "high" | "medium";
+  action: string;
+  relatedSections?: string[];
+};
+
+export type RfpSummary = {
+  highRiskGaps: RfpGapItem[];
+  nonComplianceFlags: RfpNonComplianceItem[];
+  recommendedActions: RfpRecommendedAction[];
+  thresholdPercent: number;
+};
+
 export type SectionScore = {
   sectionId: string;
   title: string;
@@ -73,6 +108,7 @@ export type AssessmentReport = {
   answeredQuestions: number;
   requiredQuestions: number;
   requiredAnswered: number;
+  rfpSummary?: RfpSummary;
 };
 
 export type AssessmentWithFramework = {
@@ -87,6 +123,8 @@ export type AssessmentWithFramework = {
   answers: AssessmentAnswers;
   score: number | null;
   report: AssessmentReport | null;
+  assessment_mode: AssessmentMode;
+  customer_profile: CustomerProfile | null;
   created_at: string;
   updated_at: string;
 };
@@ -96,4 +134,11 @@ export type AssessmentDraft = {
   answers: AssessmentAnswers;
   status: AssessmentStatus;
   updated_at: string;
+  assessment_mode: AssessmentMode;
+  customer_profile: CustomerProfile | null;
+};
+
+export type AssessmentSessionConfig = {
+  assessmentMode: AssessmentMode;
+  customerProfile?: CustomerProfile | null;
 };

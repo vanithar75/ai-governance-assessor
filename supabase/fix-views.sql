@@ -69,6 +69,8 @@ SELECT
   a.answers,
   a.score,
   a.report,
+  a.assessment_mode,
+  a.customer_profile,
   a.created_at,
   a.updated_at
 FROM public.assessments AS a

@@ -1,16 +1,25 @@
 import Link from "next/link";
 import { CheckCircle2, RotateCcw } from "lucide-react";
 
-import type { AssessmentReport } from "@/lib/types";
+import { RfpSummaryPanel } from "@/components/assessment/rfp-summary-panel";
+import type { AssessmentReport, CustomerProfile } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 
 type ResultsPanelProps = {
   score: number;
   report: AssessmentReport;
   assessmentId?: string;
+  isCustomerMode?: boolean;
+  customerProfile?: CustomerProfile | null;
 };
 
-export function ResultsPanel({ score, report, assessmentId }: ResultsPanelProps) {
+export function ResultsPanel({
+  score,
+  report,
+  assessmentId,
+  isCustomerMode = false,
+  customerProfile,
+}: ResultsPanelProps) {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-8 text-center">
@@ -18,10 +27,12 @@ export function ResultsPanel({ score, report, assessmentId }: ResultsPanelProps)
           <CheckCircle2 className="size-7" />
         </div>
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-          Assessment submitted
+          {isCustomerMode ? "Customer assessment submitted" : "Assessment submitted"}
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Your {report.frameworkName} results have been saved to Supabase.
+          {isCustomerMode
+            ? `RFP readiness results for ${customerProfile?.companyName ?? "customer"} have been saved.`
+            : `Your ${report.frameworkName} results have been saved to Supabase.`}
         </p>
         <div className="mx-auto mt-6 flex size-32 items-center justify-center rounded-full border-4 border-emerald-500/30 bg-background">
           <div>
@@ -61,6 +72,13 @@ export function ResultsPanel({ score, report, assessmentId }: ResultsPanelProps)
           ))}
         </div>
       </div>
+
+      {isCustomerMode && report.rfpSummary ? (
+        <RfpSummaryPanel
+          summary={report.rfpSummary}
+          customerProfile={customerProfile}
+        />
+      ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
         {assessmentId ? (
