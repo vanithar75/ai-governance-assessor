@@ -3,9 +3,11 @@ name: Publish standards
 on:
   push:
     branches:
+      - master
       - main
     paths:
       - "standards/**"
+  workflow_dispatch:
 
 jobs:
   publish:
