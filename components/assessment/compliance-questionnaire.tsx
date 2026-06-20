@@ -1,20 +1,26 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   ArrowLeft,
   ArrowRight,
   Loader2,
+  Save,
   Send,
 } from "lucide-react";
 
-import { submitAssessment } from "@/app/actions/assessments";
+import {
+  saveAssessmentDraft,
+  submitAssessment,
+} from "@/app/actions/assessments";
+import { DraftResumePrompt } from "@/components/assessment/draft-resume-prompt";
 import { ResultsPanel } from "@/components/assessment/results-panel";
 import { QuestionField } from "@/components/assessment/question-field";
 import { Button } from "@/components/ui/button";
 import { getUnansweredRequired } from "@/lib/scoring";
 import type {
   AssessmentAnswers,
+  AssessmentDraft,
   AssessmentReport,
   Framework,
 } from "@/lib/types";
@@ -22,20 +28,55 @@ import { cn } from "@/lib/utils";
 
 type ComplianceQuestionnaireProps = {
   framework: Framework;
+  initialDraft?: AssessmentDraft | null;
 };
+
+type DraftMeta = {
+  currentStep?: number;
+};
+
+function stripMeta(answers: AssessmentAnswers): AssessmentAnswers {
+  const { __meta, ...rest } = answers as AssessmentAnswers & {
+    __meta?: DraftMeta;
+  };
+  return rest;
+}
+
+function readMeta(answers: AssessmentAnswers): DraftMeta | undefined {
+  return (answers as AssessmentAnswers & { __meta?: DraftMeta }).__meta;
+}
 
 export function ComplianceQuestionnaire({
   framework,
+  initialDraft,
 }: ComplianceQuestionnaireProps) {
   const sections = framework.questions.sections;
+  const [showResumePrompt, setShowResumePrompt] = useState(
+    Boolean(initialDraft),
+  );
+  const [assessmentId, setAssessmentId] = useState<string | undefined>(
+    initialDraft?.id,
+  );
   const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState<AssessmentAnswers>({});
+  const [answers, setAnswers] = useState<AssessmentAnswers>(() =>
+    initialDraft ? stripMeta(initialDraft.answers) : {},
+  );
   const [error, setError] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">(
+    "idle",
+  );
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<{
     score: number;
     report: AssessmentReport;
+    assessmentId: string;
   } | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const answersRef = useRef(answers);
+  const currentStepRef = useRef(currentStep);
+
+  answersRef.current = answers;
+  currentStepRef.current = currentStep;
 
   const currentSection = sections[currentStep];
   const progress = ((currentStep + 1) / sections.length) * 100;
@@ -61,16 +102,70 @@ export function ComplianceQuestionnaire({
     [answers, sections],
   );
 
+  const persistDraft = useCallback(
+    async (nextAnswers: AssessmentAnswers, step: number) => {
+      setSaveState("saving");
+      const response = await saveAssessmentDraft(
+        framework.id,
+        nextAnswers,
+        framework.framework_version_id,
+        step,
+      );
+
+      if (response.error) {
+        setSaveState("idle");
+        return;
+      }
+
+      if (response.assessmentId) {
+        setAssessmentId(response.assessmentId);
+      }
+      setSaveState("saved");
+    },
+    [framework.framework_version_id, framework.id],
+  );
+
+  const scheduleSave = useCallback(
+    (nextAnswers: AssessmentAnswers, step: number) => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+
+      saveTimerRef.current = setTimeout(() => {
+        void persistDraft(nextAnswers, step);
+      }, 800);
+    },
+    [persistDraft],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, []);
+
   function updateAnswer(questionId: string, value: AssessmentAnswers[string]) {
-    setAnswers((previous) => ({
-      ...previous,
-      [questionId]: value,
-    }));
+    setAnswers((previous) => {
+      const next = {
+        ...previous,
+        [questionId]: value,
+      };
+      if (!assessmentId) {
+        void persistDraft(next, currentStepRef.current);
+      } else {
+        scheduleSave(next, currentStepRef.current);
+      }
+      return next;
+    });
     setError(null);
   }
 
   function goToStep(step: number) {
-    setCurrentStep(Math.max(0, Math.min(step, sections.length - 1)));
+    const nextStep = Math.max(0, Math.min(step, sections.length - 1));
+    setCurrentStep(nextStep);
+    void persistDraft(answersRef.current, nextStep);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -106,6 +201,7 @@ export function ComplianceQuestionnaire({
         framework.questions,
         answers,
         framework.framework_version_id,
+        assessmentId,
       );
 
       if (response.error) {
@@ -113,15 +209,57 @@ export function ComplianceQuestionnaire({
         return;
       }
 
-      if (response.success && response.report) {
-        setResult({ score: response.score ?? 0, report: response.report });
+      if (response.success && response.report && response.assessmentId) {
+        setResult({
+          score: response.score ?? 0,
+          report: response.report,
+          assessmentId: response.assessmentId,
+        });
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     });
   }
 
+  function handleResumeDraft() {
+    if (initialDraft) {
+      const meta = readMeta(initialDraft.answers);
+      const restoredAnswers = stripMeta(initialDraft.answers);
+      setAnswers(restoredAnswers);
+      setAssessmentId(initialDraft.id);
+      setCurrentStep(
+        Math.min(meta?.currentStep ?? 0, sections.length - 1),
+      );
+    }
+    setShowResumePrompt(false);
+  }
+
+  function handleStartFresh() {
+    setAnswers({});
+    setAssessmentId(undefined);
+    setCurrentStep(0);
+    setShowResumePrompt(false);
+  }
+
   if (result) {
-    return <ResultsPanel score={result.score} report={result.report} />;
+    return (
+      <ResultsPanel
+        score={result.score}
+        report={result.report}
+        assessmentId={result.assessmentId}
+      />
+    );
+  }
+
+  if (showResumePrompt && initialDraft) {
+    return (
+      <DraftResumePrompt
+        frameworkId={framework.id}
+        frameworkVersionId={framework.framework_version_id}
+        draft={initialDraft}
+        onResume={handleResumeDraft}
+        onStartFresh={handleStartFresh}
+      />
+    );
   }
 
   return (
@@ -146,6 +284,19 @@ export function ComplianceQuestionnaire({
             <p className="text-xs text-muted-foreground">
               {answeredInSection} of {currentSection.questions.length} answered
               in this section
+            </p>
+            <p className="mt-1 flex items-center justify-end gap-1 text-xs text-muted-foreground">
+              {saveState === "saving" ? (
+                <>
+                  <Loader2 className="size-3 animate-spin" />
+                  Saving...
+                </>
+              ) : saveState === "saved" ? (
+                <>
+                  <Save className="size-3" />
+                  Draft saved
+                </>
+              ) : null}
             </p>
           </div>
         </div>
@@ -197,6 +348,7 @@ export function ComplianceQuestionnaire({
             <QuestionField
               question={question}
               answer={answers[question.id]}
+              assessmentId={assessmentId}
               onChange={(value) => updateAnswer(question.id, value)}
             />
           </div>

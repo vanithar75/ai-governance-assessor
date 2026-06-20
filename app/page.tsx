@@ -1,8 +1,13 @@
 import { AuthPanel } from "@/components/auth/auth-panel";
+import {
+  AssessmentHistory,
+  type AssessmentHistoryItem,
+} from "@/components/dashboard/assessment-history";
 import { FrameworkGrid } from "@/components/dashboard/framework-grid";
 import { SiteHeader } from "@/components/dashboard/site-header";
 import { parseFramework } from "@/lib/frameworks";
 import { createClient } from "@/lib/supabase/server";
+import type { AssessmentStatus } from "@/lib/types";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -21,12 +26,34 @@ export default async function HomePage() {
     );
   }
 
-  const { data: frameworks, error } = await supabase
-    .from("frameworks_with_questions")
-    .select(
-      "id, slug, name, description, questions, framework_version_id, framework_version, created_at",
-    )
-    .order("name");
+  const [{ data: frameworks, error }, { data: assessments }] = await Promise.all([
+    supabase
+      .from("frameworks_with_questions")
+      .select(
+        "id, slug, name, description, questions, framework_version_id, framework_version, created_at",
+      )
+      .order("name"),
+    supabase
+      .from("assessments_with_framework")
+      .select(
+        "id, framework_id, framework_name, framework_version, status, score, updated_at",
+      )
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(20),
+  ]);
+
+  const historyItems: AssessmentHistoryItem[] = (assessments ?? []).map(
+    (row) => ({
+      id: row.id,
+      framework_id: row.framework_id,
+      framework_name: row.framework_name,
+      framework_version: row.framework_version,
+      status: row.status as AssessmentStatus,
+      score: row.score,
+      updated_at: row.updated_at,
+    }),
+  );
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.12),_transparent_45%),linear-gradient(to_bottom,_#f8fafc,_#ffffff)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18),_transparent_45%),linear-gradient(to_bottom,_#020617,_#020617)]">
@@ -67,6 +94,8 @@ export default async function HomePage() {
             </p>
           </div>
         )}
+
+        <AssessmentHistory assessments={historyItems} />
       </main>
     </div>
   );

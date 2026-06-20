@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 type ResultsPanelProps = {
   score: number;
   report: AssessmentReport;
+  assessmentId?: string;
 };
 
-export function ResultsPanel({ score, report }: ResultsPanelProps) {
+export function ResultsPanel({ score, report, assessmentId }: ResultsPanelProps) {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-8 text-center">
@@ -62,6 +63,14 @@ export function ResultsPanel({ score, report }: ResultsPanelProps) {
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+        {assessmentId ? (
+          <Button
+            nativeButton={false}
+            render={<Link href={`/assessments/${assessmentId}`} />}
+          >
+            View full report
+          </Button>
+        ) : null}
         <Button nativeButton={false} render={<Link href="/" />}>
           <RotateCcw />
           Back to dashboard

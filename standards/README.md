@@ -138,3 +138,7 @@ These practices work well when using AI assistants to maintain standards:
 | `controls.yaml` | `controls` |
 
 The app reads published data through the `frameworks_with_questions` view, which reconstructs the legacy JSONB questionnaire shape from normalized rows.
+
+## Supabase free tier
+
+Phase 1 (assessment history, drafts, evidence uploads, CI publish) runs on the Supabase **free tier** — 500 MB database, 1 GB storage, 50k MAU. See `docs/PHASE1.md` for setup (storage SQL, GitHub secrets, user flows).
