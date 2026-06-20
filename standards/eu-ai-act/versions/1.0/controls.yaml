@@ -1,0 +1,203 @@
+sections:
+  - id: classification
+    title: Risk Classification & Scope
+    description: Determine whether your AI system falls under prohibited, high-risk, limited-risk, or minimal-risk categories.
+    controls:
+      - control_id: cls-01
+        title: Have you documented whether the AI system is intended to be placed on the EU market or its outputs used in the EU?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Extraterritorial scope applies to providers and deployers affecting persons in the EU.
+        severity: high
+        sort_order: 1
+      - control_id: cls-02
+        title: Have you assessed whether the system involves any prohibited AI practices (e.g., social scoring, manipulative techniques, biometric categorization)?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Prohibited practices must not be developed or deployed; document negative determinations with evidence.
+        severity: high
+        sort_order: 2
+      - control_id: cls-03
+        title: Is the system listed or equivalent to an Annex III high-risk use case (e.g., employment, credit, law enforcement, critical infrastructure)?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Annex III categories trigger conformity assessment and quality management obligations.
+        severity: high
+        sort_order: 3
+      - control_id: cls-04
+        title: If classified as high-risk, have you assigned the correct provider/deployer/importer/distributor role under the Act?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Obligations differ by actor in the value chain.
+        severity: high
+        sort_order: 4
+      - control_id: cls-05
+        title: For limited-risk systems (e.g., chatbots, emotion recognition, deepfakes), are transparency obligations identified?
+        question_type: yes_no
+        weight: 2
+        required: true
+        guidance: Users must be informed they are interacting with AI or exposed to synthetic content where required.
+        severity: medium
+        sort_order: 5
+      - control_id: cls-06
+        title: Is there a documented legal basis and DPIA (where applicable) for processing personal data in the AI system?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: AI Act obligations complement GDPR; high-risk systems often require DPIAs.
+        severity: high
+        sort_order: 6
+  - id: high_risk
+    title: High-Risk System Requirements
+    description: Core obligations for high-risk AI systems under Chapter 2 (risk management, data, documentation, transparency, human oversight, accuracy, cybersecurity).
+    controls:
+      - control_id: hr-01
+        title: Is a risk management system established and maintained throughout the AI system lifecycle?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Identify and evaluate known and reasonably foreseeable risks to health, safety, and fundamental rights.
+        severity: high
+        sort_order: 7
+      - control_id: hr-02
+        title: Are data governance practices in place ensuring training, validation, and testing datasets are relevant, representative, and free of errors to the extent possible?
+        question_type: scale
+        weight: 3
+        required: true
+        guidance: Examine potential biases and gaps that could affect fundamental rights.
+        options:
+          - Not in place
+          - Partial
+          - Documented
+          - Validated
+          - Continuously monitored
+        severity: high
+        sort_order: 8
+      - control_id: hr-03
+        title: Is technical documentation prepared per Annex IV requirements before market placement?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Documentation must be kept up to date and available to authorities upon request.
+        severity: high
+        sort_order: 9
+      - control_id: hr-04
+        title: Does the system achieve appropriate levels of accuracy, robustness, and cybersecurity?
+        question_type: scale
+        weight: 3
+        required: true
+        guidance: Include resilience against adversarial attacks and unauthorized modifications.
+        options:
+          - Not assessed
+          - Basic testing
+          - Documented benchmarks
+          - Independently verified
+          - Certified/audited
+        severity: high
+        sort_order: 10
+      - control_id: hr-05
+        title: Is effective human oversight designed into the system per Article 14 requirements?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Oversight measures must enable understanding, monitoring, and intervention or interruption.
+        severity: high
+        sort_order: 11
+      - control_id: hr-06
+        title: Is automatic logging of events (logs) enabled and retained for traceability of system operation?
+        question_type: yes_no
+        weight: 2
+        required: true
+        guidance: Logs support post-market monitoring and serious incident investigation.
+        severity: medium
+        sort_order: 12
+  - id: gpai
+    title: General-Purpose AI (GPAI) Models
+    description: Obligations for providers of general-purpose AI models and systemic risk models.
+    controls:
+      - control_id: gpai-01
+        title: If you provide a GPAI model, have you prepared and published a model card / technical documentation per Annex XI?
+        question_type: yes_no
+        weight: 3
+        required: false
+        guidance: Applies when placing GPAI models on the EU market. Mark N/A if not a GPAI provider.
+        severity: high
+        sort_order: 13
+      - control_id: gpai-02
+        title: Is a copyright compliance policy implemented for training data (including rights reservation mechanisms)?
+        question_type: yes_no
+        weight: 2
+        required: false
+        guidance: Providers must make a policy available detailing compliance with Union copyright law.
+        severity: medium
+        sort_order: 14
+      - control_id: gpai-03
+        title: For GPAI models with systemic risk, are model evaluations, adversarial testing, and incident reporting processes in place?
+        question_type: scale
+        weight: 3
+        required: false
+        guidance: Systemic risk models face additional obligations under Chapter V.
+        options:
+          - N/A
+          - Not started
+          - In progress
+          - Operational
+          - Externally audited
+        severity: high
+        sort_order: 15
+      - control_id: gpai-04
+        title: Do downstream deployers receive sufficient information to comply with their obligations when using your GPAI model?
+        question_type: yes_no
+        weight: 2
+        required: false
+        guidance: Supply documentation on capabilities, limitations, and recommended use.
+        severity: medium
+        sort_order: 16
+  - id: post_market
+    title: Post-Market Monitoring & Incident Reporting
+    description: Ongoing obligations after an AI system is placed on the market.
+    controls:
+      - control_id: pm-01
+        title: Is a post-market monitoring plan established and implemented per Article 72?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Collect and analyze performance data to detect need for corrective action.
+        severity: high
+        sort_order: 17
+      - control_id: pm-02
+        title: Is there a process to report serious incidents to market surveillance authorities without undue delay?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Define what constitutes a serious incident for your use case and escalation timelines.
+        severity: high
+        sort_order: 18
+      - control_id: pm-03
+        title: Can you execute corrective actions (updates, recalls, withdrawals) when the system no longer conforms?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Document decision criteria and communication to deployers/users.
+        severity: high
+        sort_order: 19
+      - control_id: pm-04
+        title: Is CE marking / EU declaration of conformity prepared where required for high-risk systems?
+        question_type: yes_no
+        weight: 3
+        required: false
+        guidance: Required before placing high-risk AI systems on the EU market.
+        severity: high
+        sort_order: 20
+      - control_id: pm-05
+        title: Are records retained for at least 10 years as required for high-risk AI providers?
+        question_type: yes_no
+        weight: 2
+        required: false
+        guidance: Include documentation, conformity assessment, and monitoring records.
+        severity: medium
+        sort_order: 21

@@ -1,0 +1,257 @@
+sections:
+  - id: govern
+    title: Govern
+    description: Cultivate a culture of AI risk management and establish policies, processes, and accountability structures.
+    controls:
+      - control_id: gov-01
+        title: Does your organization have a documented AI governance policy endorsed by senior leadership?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Policy should define scope, roles, acceptable use, and escalation paths for AI systems.
+        severity: high
+        sort_order: 1
+      - control_id: gov-02
+        title: Are roles and responsibilities for AI risk management clearly assigned (e.g., risk owner, model owner, legal, ethics)?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Map accountability using RACI or equivalent for each AI system in production or development.
+        severity: high
+        sort_order: 2
+      - control_id: gov-03
+        title: Is there a cross-functional AI risk committee or equivalent body that meets on a defined cadence?
+        question_type: yes_no
+        weight: 2
+        required: true
+        guidance: Include representatives from engineering, legal, privacy, security, and business stakeholders.
+        severity: medium
+        sort_order: 3
+      - control_id: gov-04
+        title: Are workforce members who develop or operate AI systems trained on organizational AI policies and risk practices?
+        question_type: scale
+        weight: 2
+        required: true
+        guidance: Training should cover bias, safety, privacy, and incident reporting.
+        options:
+          - Not at all
+          - Ad hoc
+          - Partially
+          - Mostly
+          - Fully
+        severity: medium
+        sort_order: 4
+      - control_id: gov-05
+        title: Do third-party AI components, APIs, or vendors undergo due diligence before integration?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Review vendor model cards, security posture, data handling, and contractual AI obligations.
+        severity: high
+        sort_order: 5
+      - control_id: gov-06
+        title: Is there a process to incorporate diverse perspectives (including affected communities) into AI governance decisions?
+        question_type: scale
+        weight: 2
+        required: false
+        guidance: Stakeholder engagement reduces blind spots in impact assessment.
+        options:
+          - Not at all
+          - Planned
+          - Occasionally
+          - Regularly
+          - Systematically
+        severity: medium
+        sort_order: 6
+  - id: map
+    title: Map
+    description: Establish context to frame risks related to an AI system and its deployment environment.
+    controls:
+      - control_id: map-01
+        title: Is the intended purpose, context of use, and target users documented for each AI system?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Document use cases, prohibited uses, and deployment environments.
+        severity: high
+        sort_order: 7
+      - control_id: map-02
+        title: Have you identified categories of harm the AI system could cause (e.g., safety, privacy, civil rights, reputational)?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Consider direct and indirect harms across the full lifecycle including decommissioning.
+        severity: high
+        sort_order: 8
+      - control_id: map-03
+        title: Is training, validation, and test data documented including provenance, collection methods, and known limitations?
+        question_type: scale
+        weight: 3
+        required: true
+        guidance: Data documentation supports bias and validity assessments.
+        options:
+          - Not documented
+          - Partially
+          - Mostly
+          - Fully
+          - Auditable
+        severity: high
+        sort_order: 9
+      - control_id: map-04
+        title: Are interdependencies with other systems, humans-in-the-loop, and downstream decision-makers mapped?
+        question_type: yes_no
+        weight: 2
+        required: true
+        guidance: Include APIs, orchestration layers, and manual override workflows.
+        severity: medium
+        sort_order: 10
+      - control_id: map-05
+        title: Have you assessed whether the system's outputs could be used in ways beyond the intended purpose (misuse/abuse)?
+        question_type: yes_no
+        weight: 2
+        required: true
+        guidance: Document foreseeable misuse scenarios and mitigations.
+        severity: medium
+        sort_order: 11
+      - control_id: map-06
+        title: Is the AI system's trustworthiness profile documented across validity, reliability, safety, security, explainability, privacy, and fairness?
+        question_type: scale
+        weight: 3
+        required: true
+        guidance: NIST AI RMF characterizes trustworthiness across multiple dimensions.
+        options:
+          - None
+          - Some dimensions
+          - Most dimensions
+          - All dimensions
+          - All with evidence
+        severity: high
+        sort_order: 12
+  - id: measure
+    title: Measure
+    description: Analyze, assess, benchmark, and monitor AI risk and related impacts using quantitative and qualitative methods.
+    controls:
+      - control_id: mea-01
+        title: Are model performance metrics defined, measured, and tracked against acceptance thresholds?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Metrics should align with the intended task and include subgroup/disaggregated analysis where applicable.
+        severity: high
+        sort_order: 13
+      - control_id: mea-02
+        title: Do you conduct bias and fairness evaluations before deployment and on an ongoing basis?
+        question_type: scale
+        weight: 3
+        required: true
+        guidance: Evaluate across protected attributes and intersectional groups where legally and ethically appropriate.
+        options:
+          - Never
+          - Pre-deploy only
+          - Annual
+          - Quarterly
+          - Continuous
+        severity: high
+        sort_order: 14
+      - control_id: mea-03
+        title: Is there red-teaming, adversarial testing, or robustness evaluation for safety-critical or high-impact systems?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Include prompt injection, data poisoning, and edge-case testing for generative AI.
+        severity: high
+        sort_order: 15
+      - control_id: mea-04
+        title: Are privacy impacts assessed (e.g., re-identification risk, memorization, data minimization compliance)?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Align with applicable privacy regulations and internal data classification policies.
+        severity: high
+        sort_order: 16
+      - control_id: mea-05
+        title: Is human oversight effectiveness evaluated (override rates, error catch rates, operator feedback)?
+        question_type: scale
+        weight: 2
+        required: false
+        guidance: Human-AI teaming should be measured, not assumed.
+        options:
+          - Not evaluated
+          - Informal
+          - Periodic review
+          - Metrics tracked
+          - Optimized
+        severity: medium
+        sort_order: 17
+      - control_id: mea-06
+        title: Are environmental and compute costs tracked for large-scale model training and inference?
+        question_type: yes_no
+        weight: 1
+        required: false
+        guidance: Sustainability is an emerging governance consideration for foundation models.
+        severity: low
+        sort_order: 18
+  - id: manage
+    title: Manage
+    description: Prioritize and act upon mapped and measured risks to reach acceptable risk levels.
+    controls:
+      - control_id: mgt-01
+        title: Is there a risk treatment plan that documents mitigations, residual risk acceptance, and owners?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Link mitigations to specific identified risks and track implementation status.
+        severity: high
+        sort_order: 19
+      - control_id: mgt-02
+        title: Can high-risk AI systems be paused, rolled back, or decommissioned quickly if harm is detected?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Define kill-switch procedures and communication plans.
+        severity: high
+        sort_order: 20
+      - control_id: mgt-03
+        title: Is there an AI incident response process integrated with security and privacy incident management?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Cover model drift, harmful outputs, data breaches involving AI pipelines, and regulatory notification.
+        severity: high
+        sort_order: 21
+      - control_id: mgt-04
+        title: Are model and prompt changes subject to change management with version control and approval gates?
+        question_type: scale
+        weight: 2
+        required: true
+        guidance: Include evaluation requirements before promotion to production.
+        options:
+          - None
+          - Informal
+          - Documented
+          - Automated gates
+          - Full MLOps pipeline
+        severity: medium
+        sort_order: 22
+      - control_id: mgt-05
+        title: Do you communicate AI limitations and appropriate use to end users and customers?
+        question_type: yes_no
+        weight: 2
+        required: true
+        guidance: Transparency materials should be accessible and kept current.
+        severity: medium
+        sort_order: 23
+      - control_id: mgt-06
+        title: Is there a periodic management review of AI risks, metrics, and improvement actions?
+        question_type: scale
+        weight: 2
+        required: true
+        guidance: Feed review outcomes back into Govern and Map activities.
+        options:
+          - Never
+          - Ad hoc
+          - Annual
+          - Quarterly
+          - Continuous improvement loop
+        severity: medium
+        sort_order: 24

@@ -1,0 +1,287 @@
+sections:
+  - id: context
+    title: Context of the Organization (Clause 4)
+    description: Understand internal and external issues, interested parties, and AIMS scope.
+    controls:
+      - control_id: ctx-01
+        title: Have internal and external issues relevant to AI management objectives been identified and reviewed?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Consider technology trends, regulation, ethics, supply chain, and organizational culture.
+        severity: high
+        sort_order: 1
+      - control_id: ctx-02
+        title: Are interested parties and their requirements related to responsible AI documented?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Include regulators, customers, employees, affected communities, and partners.
+        severity: high
+        sort_order: 2
+      - control_id: ctx-03
+        title: Is the scope of the AI Management System (AIMS) defined, documented, and communicated?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Scope should state boundaries, applicability, and exclusions with justification.
+        severity: high
+        sort_order: 3
+      - control_id: ctx-04
+        title: Is there an inventory of AI systems within the AIMS scope?
+        question_type: scale
+        weight: 2
+        required: true
+        guidance: Inventory supports lifecycle management and impact assessment.
+        options:
+          - None
+          - Partial list
+          - Maintained inventory
+          - With risk tiers
+          - Integrated with CMDB
+        severity: medium
+        sort_order: 4
+  - id: leadership
+    title: Leadership (Clause 5)
+    description: Top management commitment, AI policy, and organizational roles.
+    controls:
+      - control_id: ldr-01
+        title: Has top management demonstrated leadership and commitment to the AIMS?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Evidence includes resource allocation, policy approval, and management reviews.
+        severity: high
+        sort_order: 5
+      - control_id: ldr-02
+        title: Is there a documented AI policy aligned with organizational strategy and legal/ethical requirements?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Policy should include commitments to continual improvement and responsible AI principles.
+        severity: high
+        sort_order: 6
+      - control_id: ldr-03
+        title: Are roles, responsibilities, and authorities for AIMS conformance assigned and communicated?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Include an AI management representative or equivalent accountability structure.
+        severity: high
+        sort_order: 7
+      - control_id: ldr-04
+        title: Are AI objectives established at relevant functions and levels, measured, and reviewed?
+        question_type: scale
+        weight: 2
+        required: true
+        guidance: Objectives should be consistent, measurable, and updated during management review.
+        options:
+          - None
+          - Informal goals
+          - Documented objectives
+          - Tracked KPIs
+          - Aligned to strategy
+        severity: medium
+        sort_order: 8
+  - id: planning
+    title: Planning (Clause 6)
+    description: Risk and opportunity management, AI impact assessment, and planning of changes.
+    controls:
+      - control_id: pln-01
+        title: Is there a documented process for AI risk assessment and treatment integrated with organizational risk management?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Align with ISO/IEC 23894 guidance on AI risk management where applicable.
+        severity: high
+        sort_order: 9
+      - control_id: pln-02
+        title: Are AI system impact assessments conducted to evaluate consequences for individuals and society?
+        question_type: scale
+        weight: 3
+        required: true
+        guidance: Impact assessments inform design, deployment, and monitoring controls.
+        options:
+          - Never
+          - High-risk only
+          - Most systems
+          - All in scope
+          - With stakeholder input
+        severity: high
+        sort_order: 10
+      - control_id: pln-03
+        title: Are legal, regulatory, and contractual requirements related to AI identified and kept current?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Maintain a compliance register mapped to AI systems and jurisdictions.
+        severity: high
+        sort_order: 11
+      - control_id: pln-04
+        title: Are changes to the AIMS or AI systems planned with impact analysis and approved controls?
+        question_type: yes_no
+        weight: 2
+        required: true
+        guidance: Include re-assessment triggers for model updates, new data sources, and use case changes.
+        severity: medium
+        sort_order: 12
+  - id: support
+    title: Support (Clause 7)
+    description: Resources, competence, awareness, communication, and documented information.
+    controls:
+      - control_id: sup-01
+        title: Are adequate resources allocated for establishing and maintaining the AIMS?
+        question_type: yes_no
+        weight: 2
+        required: true
+        guidance: Include budget, tooling, expertise, and infrastructure for responsible AI.
+        severity: medium
+        sort_order: 13
+      - control_id: sup-02
+        title: Is competence for personnel affecting AI performance and compliance determined, ensured, and recorded?
+        question_type: scale
+        weight: 3
+        required: true
+        guidance: Cover ethics, security, data science, legal, and domain expertise as appropriate.
+        options:
+          - Not addressed
+          - Ad hoc training
+          - Role-based curriculum
+          - Assessed competence
+          - Certified roles
+        severity: high
+        sort_order: 14
+      - control_id: sup-03
+        title: Do personnel understand their contribution to effective AIMS and implications of nonconformity?
+        question_type: yes_no
+        weight: 2
+        required: true
+        guidance: Awareness programs should be periodic and updated when policies change.
+        severity: medium
+        sort_order: 15
+      - control_id: sup-04
+        title: Is documented information required by the AIMS controlled (versioning, access, retention)?
+        question_type: yes_no
+        weight: 2
+        required: true
+        guidance: Apply document control consistent with ISO management system practices.
+        severity: medium
+        sort_order: 16
+  - id: operation
+    title: Operation (Clause 8)
+    description: Operational planning, AI risk treatment, data management, and lifecycle controls.
+    controls:
+      - control_id: ops-01
+        title: Are operational controls implemented for AI development, deployment, and monitoring per the risk treatment plan?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Controls may include access management, evaluation gates, and logging.
+        severity: high
+        sort_order: 17
+      - control_id: ops-02
+        title: Is data for AI systems managed throughout its lifecycle (quality, provenance, privacy, security)?
+        question_type: scale
+        weight: 3
+        required: true
+        guidance: Reference ISO/IEC 5259 data quality characteristics where helpful.
+        options:
+          - Minimal
+          - Basic policies
+          - Documented lifecycle
+          - Automated quality checks
+          - Auditable lineage
+        severity: high
+        sort_order: 18
+      - control_id: ops-03
+        title: Are suppliers and partners providing AI-related products or services evaluated and monitored?
+        question_type: yes_no
+        weight: 2
+        required: true
+        guidance: Include cloud AI APIs, labeled data vendors, and outsourced model development.
+        severity: medium
+        sort_order: 19
+      - control_id: ops-04
+        title: Is there a defined process for responsible design, development, and deployment of AI systems?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Embed requirements for fairness, transparency, robustness, and human oversight in SDLC.
+        severity: high
+        sort_order: 20
+  - id: performance
+    title: Performance Evaluation (Clause 9)
+    description: Monitoring, measurement, internal audit, and management review.
+    controls:
+      - control_id: perf-01
+        title: Are AIMS performance indicators monitored, measured, analyzed, and evaluated?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Track leading and lagging indicators for AI risks and objectives.
+        severity: high
+        sort_order: 21
+      - control_id: perf-02
+        title: Is an internal audit program conducted at planned intervals for the AIMS?
+        question_type: scale
+        weight: 3
+        required: true
+        guidance: Auditors should be objective and competent in AI management systems.
+        options:
+          - None
+          - Planned
+          - Annual audits
+          - Risk-based program
+          - Independent audits
+        severity: high
+        sort_order: 22
+      - control_id: perf-03
+        title: Does top management review the AIMS at planned intervals covering status, changes, and improvement opportunities?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Management review inputs include audit results, incidents, and stakeholder feedback.
+        severity: high
+        sort_order: 23
+      - control_id: perf-04
+        title: Are customer and user feedback channels used to evaluate AI system performance and trust?
+        question_type: yes_no
+        weight: 2
+        required: false
+        guidance: Complaints and feedback inform corrective action and continual improvement.
+        severity: medium
+        sort_order: 24
+  - id: improvement
+    title: Improvement (Clause 10)
+    description: Nonconformity, corrective action, and continual improvement.
+    controls:
+      - control_id: imp-01
+        title: Is there a process to identify, document, and react to nonconformities (including AI-related incidents)?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Integrate with incident management and regulatory reporting where required.
+        severity: high
+        sort_order: 25
+      - control_id: imp-02
+        title: Are root cause analyses performed and corrective actions implemented to prevent recurrence?
+        question_type: yes_no
+        weight: 3
+        required: true
+        guidance: Verify effectiveness of corrective actions before closing records.
+        severity: high
+        sort_order: 26
+      - control_id: imp-03
+        title: Does the organization demonstrate continual improvement of the AIMS suitability, adequacy, and effectiveness?
+        question_type: scale
+        weight: 2
+        required: true
+        guidance: Use audit findings, metrics trends, and lessons learned to drive improvement.
+        options:
+          - Reactive only
+          - Occasional
+          - Planned cycles
+          - Measured improvement
+          - Culture of improvement
+        severity: medium
+        sort_order: 27

@@ -1,0 +1,4 @@
+version: "1.0"
+status: published
+changelog: Initial release migrated from legacy seed data.
+published_at: 2024-06-01T00:00:00.000Z
