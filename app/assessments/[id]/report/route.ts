@@ -2,7 +2,9 @@ import { type NextRequest } from "next/server";
 
 import {
   buildAssessmentReportHtml,
-  buildReportAnswerRows,
+  buildFallbackSections,
+  buildReportSections,
+  type ReportSection,
 } from "@/lib/assessment-report-html";
 import { parseFramework } from "@/lib/frameworks";
 import { createClient } from "@/lib/supabase/server";
@@ -11,7 +13,7 @@ import type {
   AssessmentMode,
   AssessmentReport,
   CustomerProfile,
-  FrameworkQuestion,
+  FrameworkSection,
 } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -55,7 +57,7 @@ export async function GET(
   const customerProfile =
     assessment.customer_profile as CustomerProfile | null;
 
-  const questionsById = new Map<string, FrameworkQuestion>();
+  let frameworkSections: FrameworkSection[] = [];
 
   if (assessment.framework_version_id) {
     const { data: versionRow } = await supabase
@@ -72,13 +74,13 @@ export async function GET(
         questions: versionRow.questions,
         created_at: assessment.created_at,
       });
-      for (const section of parsed.questions.sections) {
-        for (const question of section.questions) {
-          questionsById.set(question.id, question);
-        }
-      }
+      frameworkSections = parsed.questions.sections;
     }
   }
+
+  const sections: ReportSection[] = frameworkSections.length
+    ? buildReportSections(frameworkSections, answers)
+    : buildFallbackSections(answers);
 
   const autoPrint = request.nextUrl.searchParams.get("print") === "1";
 
@@ -89,7 +91,7 @@ export async function GET(
     assessmentMode,
     customerProfile,
     report,
-    answerRows: buildReportAnswerRows(questionsById, answers),
+    sections,
     generatedAt: new Date().toISOString(),
     autoPrint,
   });

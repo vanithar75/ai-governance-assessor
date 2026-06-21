@@ -4,15 +4,24 @@ import type {
   AssessmentReport,
   CustomerProfile,
   FrameworkQuestion,
+  FrameworkSection,
   QuestionAnswer,
 } from "@/lib/types";
 
-export type ReportAnswerRow = {
-  questionId: string;
-  questionText: string;
+export type ReportControlRow = {
+  controlId: string;
+  text: string;
   answerLabel: string;
+  required: boolean;
   notes?: string;
   evidenceName?: string;
+};
+
+export type ReportSection = {
+  id: string;
+  title: string;
+  description?: string;
+  controls: ReportControlRow[];
 };
 
 export type AssessmentReportHtmlInput = {
@@ -22,7 +31,7 @@ export type AssessmentReportHtmlInput = {
   assessmentMode: AssessmentMode;
   customerProfile?: CustomerProfile | null;
   report: AssessmentReport | null;
-  answerRows: ReportAnswerRow[];
+  sections: ReportSection[];
   generatedAt: string;
   /** When true, the document triggers the browser print dialog on load. */
   autoPrint?: boolean;
@@ -60,24 +69,57 @@ export function formatAnswerValue(
   return String(answer.value);
 }
 
-export function buildReportAnswerRows(
-  questionsById: Map<string, FrameworkQuestion>,
+/**
+ * Group answered controls by framework section, preserving section and
+ * question order. Includes every control (even unanswered optional ones) so
+ * the report reads as a full control-by-control result set.
+ */
+export function buildReportSections(
+  frameworkSections: FrameworkSection[],
   answers: AssessmentAnswers,
-): ReportAnswerRow[] {
-  return Object.entries(answers)
-    .filter(([key]) => key !== "__meta")
-    .map(([questionId, answer]) => {
-      const question = questionsById.get(questionId);
+): ReportSection[] {
+  return frameworkSections.map((section) => ({
+    id: section.id,
+    title: section.title,
+    description: section.description,
+    controls: section.questions.map((question) => {
+      const answer = answers[question.id];
       return {
-        questionId,
-        questionText: question?.text ?? "Question",
-        answerLabel: question
-          ? formatAnswerValue(question, answer)
-          : String(answer.value),
-        notes: answer.notes,
-        evidenceName: answer.evidence?.name,
+        controlId: question.id,
+        text: question.text,
+        answerLabel: formatAnswerValue(question, answer),
+        required: question.required,
+        notes: answer?.notes,
+        evidenceName: answer?.evidence?.name,
       };
-    });
+    }),
+  }));
+}
+
+/**
+ * Fallback grouping for legacy assessments that are not pinned to a framework
+ * version (no normalized question metadata available). Renders the raw
+ * responses under a single section.
+ */
+export function buildFallbackSections(
+  answers: AssessmentAnswers,
+): ReportSection[] {
+  const controls: ReportControlRow[] = Object.entries(answers)
+    .filter(([key]) => key !== "__meta")
+    .map(([questionId, answer]) => ({
+      controlId: questionId,
+      text: questionId,
+      answerLabel: String(answer.value),
+      required: false,
+      notes: answer.notes,
+      evidenceName: answer.evidence?.name,
+    }));
+
+  if (controls.length === 0) {
+    return [];
+  }
+
+  return [{ id: "responses", title: "Responses", controls }];
 }
 
 function formatDate(iso: string): string {
@@ -91,27 +133,101 @@ function formatDate(iso: string): string {
   }).format(date);
 }
 
-function renderCustomerProfile(profile: CustomerProfile): string {
-  const rows: Array<[string, string | undefined]> = [
-    ["Company", profile.companyName],
-    ["RFP reference", profile.rfpReference],
-    ["Industry", profile.industry],
-    ["Contact", profile.contactEmail],
+function formatDateOnly(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return iso;
+  }
+  return new Intl.DateTimeFormat("en-US", { dateStyle: "long" }).format(date);
+}
+
+function renderCoverPage(input: AssessmentReportHtmlInput): string {
+  const isCustomer = input.assessmentMode === "customer";
+  const reportKind = isCustomer
+    ? "Customer RFP Compliance Report"
+    : "Internal Compliance Report";
+  const versionLabel = input.frameworkVersion
+    ? `Version ${escapeHtml(String(input.frameworkVersion))}`
+    : "";
+  const completedAt = input.report?.completedAt ?? input.generatedAt;
+
+  const profile = input.customerProfile;
+  const profileBlock =
+    isCustomer && profile
+      ? `<div class="cover-profile">
+          ${profile.companyName ? `<div><span>Prepared for</span><strong>${escapeHtml(profile.companyName)}</strong></div>` : ""}
+          ${profile.rfpReference ? `<div><span>RFP reference</span><strong>${escapeHtml(profile.rfpReference)}</strong></div>` : ""}
+          ${profile.industry ? `<div><span>Industry</span><strong>${escapeHtml(profile.industry)}</strong></div>` : ""}
+          ${profile.contactEmail ? `<div><span>Contact</span><strong>${escapeHtml(profile.contactEmail)}</strong></div>` : ""}
+        </div>`
+      : "";
+
+  return `
+    <section class="cover">
+      <div class="cover-top">
+        <p class="cover-brand">AI Governance Assessor</p>
+        <span class="badge">${isCustomer ? "Customer RFP" : "Internal"}</span>
+      </div>
+      <div class="cover-main">
+        <p class="cover-kicker">${escapeHtml(reportKind)}</p>
+        <h1 class="cover-title">${escapeHtml(input.frameworkName)}</h1>
+        ${versionLabel ? `<p class="cover-version">${versionLabel}</p>` : ""}
+        <div class="cover-score">
+          <div class="cover-score-num">${input.score}</div>
+          <div class="cover-score-lbl">Overall score / 100</div>
+        </div>
+        ${profileBlock}
+      </div>
+      <div class="cover-foot">
+        <div><span>Assessment completed</span><strong>${escapeHtml(formatDateOnly(completedAt))}</strong></div>
+        <div><span>Report generated</span><strong>${escapeHtml(formatDateOnly(input.generatedAt))}</strong></div>
+      </div>
+    </section>`;
+}
+
+function renderExecutiveSummary(input: AssessmentReportHtmlInput): string {
+  const report = input.report;
+  const summaryText = report?.summary ?? "";
+
+  const metrics: Array<[string, string]> = [
+    ["Overall score", `${input.score} / 100`],
   ];
 
-  const cells = rows
-    .filter(([, value]) => value)
+  if (report) {
+    metrics.push([
+      "Questions answered",
+      `${report.answeredQuestions} / ${report.totalQuestions}`,
+    ]);
+    metrics.push([
+      "Required controls met",
+      `${report.requiredAnswered} / ${report.requiredQuestions}`,
+    ]);
+  }
+
+  if (input.assessmentMode === "customer" && report?.rfpSummary) {
+    metrics.push([
+      "High-risk gaps",
+      String(report.rfpSummary.highRiskGaps.length),
+    ]);
+    metrics.push([
+      "Non-compliance flags",
+      String(report.rfpSummary.nonComplianceFlags.length),
+    ]);
+  }
+
+  const metricCells = metrics
     .map(
       ([label, value]) =>
-        `<div class="profile-item"><span class="profile-label">${escapeHtml(
-          label,
-        )}</span><span class="profile-value">${escapeHtml(
-          String(value),
-        )}</span></div>`,
+        `<div class="metric"><span class="metric-label">${escapeHtml(label)}</span><span class="metric-value">${escapeHtml(value)}</span></div>`,
     )
     .join("");
 
-  return `<section class="card"><h2>Customer profile</h2><div class="profile-grid">${cells}</div></section>`;
+  return `
+    <section class="card">
+      <h2>Executive summary</h2>
+      ${summaryText ? `<p class="summary">${escapeHtml(summaryText)}</p>` : ""}
+      <div class="metric-grid">${metricCells}</div>
+    </section>`;
 }
 
 function renderSectionScores(report: AssessmentReport): string {
@@ -180,39 +296,62 @@ function renderRfpSummary(report: AssessmentReport): string {
     </section>`;
 }
 
-function renderAnswers(rows: ReportAnswerRow[]): string {
-  if (!rows.length) {
+function renderControlResults(sections: ReportSection[]): string {
+  if (!sections.length) {
     return "";
   }
 
-  const body = rows
-    .map(
-      (row) => `
-        <div class="answer">
-          <p class="answer-q">${escapeHtml(row.questionText)}</p>
-          <p class="answer-a">${escapeHtml(row.answerLabel)}</p>
-          ${row.notes ? `<p class="muted">Notes: ${escapeHtml(row.notes)}</p>` : ""}
-          ${row.evidenceName ? `<p class="muted">Evidence: ${escapeHtml(row.evidenceName)}</p>` : ""}
-        </div>`,
-    )
+  const sectionBlocks = sections
+    .map((section) => {
+      const controls = section.controls
+        .map(
+          (control) => `
+            <div class="control">
+              <div class="control-head">
+                <span class="control-id">${escapeHtml(control.controlId)}</span>
+                ${control.required ? `<span class="tag tag-required">Required</span>` : `<span class="tag">Optional</span>`}
+              </div>
+              <p class="control-q">${escapeHtml(control.text)}</p>
+              <p class="control-a"><span class="control-a-label">Response:</span> ${escapeHtml(control.answerLabel)}</p>
+              ${control.notes ? `<p class="muted">Notes: ${escapeHtml(control.notes)}</p>` : ""}
+              ${control.evidenceName ? `<p class="muted">Evidence: ${escapeHtml(control.evidenceName)}</p>` : ""}
+            </div>`,
+        )
+        .join("");
+
+      return `
+        <div class="control-section">
+          <h3>${escapeHtml(section.title)}</h3>
+          ${section.description ? `<p class="muted">${escapeHtml(section.description)}</p>` : ""}
+          ${controls}
+        </div>`;
+    })
     .join("");
 
-  return `<section class="card answers"><h2>Answers summary</h2>${body}</section>`;
+  return `<section class="card"><h2>Control-by-control results</h2>${sectionBlocks}</section>`;
+}
+
+function renderEvidenceReferences(sections: ReportSection[]): string {
+  const items = sections.flatMap((section) =>
+    section.controls
+      .filter((control) => control.evidenceName)
+      .map(
+        (control) =>
+          `<li><span class="control-id">${escapeHtml(control.controlId)}</span> ${escapeHtml(control.evidenceName ?? "")} <span class="muted">(${escapeHtml(section.title)})</span></li>`,
+      ),
+  );
+
+  const body = items.length
+    ? `<ul class="list">${items.join("")}</ul>`
+    : `<p class="muted">No supporting evidence files were attached to this assessment.</p>`;
+
+  return `<section class="card"><h2>Evidence references</h2>${body}</section>`;
 }
 
 export function buildAssessmentReportHtml(
   input: AssessmentReportHtmlInput,
 ): string {
-  const isCustomer = input.assessmentMode === "customer";
-  const reportTitle = isCustomer
-    ? "Customer RFP Assessment Report"
-    : "Assessment Report";
-  const versionLabel = input.frameworkVersion
-    ? ` · v${escapeHtml(String(input.frameworkVersion))}`
-    : "";
-  const completedAt = input.report?.completedAt ?? input.generatedAt;
-
-  const docTitle = `${input.frameworkName} ${reportTitle}`;
+  const docTitle = `${input.frameworkName} Compliance Report`;
 
   const autoPrintScript = input.autoPrint
     ? `<script>window.addEventListener("load",function(){setTimeout(function(){window.print();},350);});</script>`
@@ -231,7 +370,7 @@ export function buildAssessmentReportHtml(
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     color: #0f172a;
-    background: #f8fafc;
+    background: #f1f5f9;
     line-height: 1.5;
   }
   .toolbar {
@@ -243,6 +382,7 @@ export function buildAssessmentReportHtml(
     padding: 12px 16px;
     background: #ffffff;
     border-bottom: 1px solid #e2e8f0;
+    z-index: 10;
   }
   .toolbar button {
     font: inherit;
@@ -254,54 +394,81 @@ export function buildAssessmentReportHtml(
     background: #4f46e5;
     color: #ffffff;
   }
-  .page { max-width: 800px; margin: 0 auto; padding: 32px 24px 48px; }
-  header.report-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid #e2e8f0;
-    margin-bottom: 24px;
-  }
-  .eyebrow { color: #4f46e5; font-size: 13px; font-weight: 600; margin: 0; }
-  h1 { font-size: 26px; margin: 6px 0 4px; }
-  .meta { color: #64748b; font-size: 13px; margin: 4px 0 0; }
+  .page { max-width: 820px; margin: 0 auto; padding: 24px; }
   .badge {
     display: inline-block;
     font-size: 11px;
     font-weight: 600;
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 999px;
     background: #eef2ff;
     color: #4338ca;
-    margin-bottom: 6px;
   }
-  .score-badge {
-    flex: 0 0 auto;
-    width: 96px; height: 96px;
-    border-radius: 50%;
-    border: 5px solid rgba(79,70,229,0.25);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
+  /* Cover page */
+  .cover {
     background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 48px 40px;
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    margin-bottom: 24px;
   }
-  .score-badge .num { font-size: 30px; font-weight: 700; }
-  .score-badge .lbl { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b; }
+  .cover-top { display: flex; justify-content: space-between; align-items: center; }
+  .cover-brand { font-weight: 700; color: #4f46e5; margin: 0; letter-spacing: 0.01em; }
+  .cover-main { padding: 40px 0; }
+  .cover-kicker { color: #64748b; font-size: 14px; font-weight: 600; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .cover-title { font-size: 40px; line-height: 1.1; margin: 0; }
+  .cover-version { color: #64748b; margin: 8px 0 0; font-size: 15px; }
+  .cover-score {
+    margin-top: 32px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 32px;
+    border: 2px solid rgba(79,70,229,0.25);
+    border-radius: 16px;
+    background: #f8fafc;
+  }
+  .cover-score-num { font-size: 52px; font-weight: 800; color: #4f46e5; line-height: 1; }
+  .cover-score-lbl { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 6px; }
+  .cover-profile {
+    margin-top: 32px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 28px;
+    max-width: 540px;
+  }
+  .cover-profile div { display: flex; flex-direction: column; }
+  .cover-profile span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; }
+  .cover-profile strong { font-size: 15px; }
+  .cover-foot {
+    display: flex; gap: 48px;
+    border-top: 1px solid #e2e8f0; padding-top: 20px;
+  }
+  .cover-foot div { display: flex; flex-direction: column; }
+  .cover-foot span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; }
+  .cover-foot strong { font-size: 14px; }
+  /* Content cards */
   .card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 14px;
-    padding: 20px;
+    padding: 22px;
     margin-bottom: 20px;
   }
-  .card h2 { font-size: 17px; margin: 0 0 14px; }
-  .card h3 { font-size: 14px; margin: 16px 0 6px; color: #334155; }
-  .summary { font-size: 14px; color: #475569; }
-  .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; }
-  .profile-item { display: flex; flex-direction: column; }
-  .profile-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; }
-  .profile-value { font-size: 14px; font-weight: 500; }
+  .card h2 { font-size: 18px; margin: 0 0 14px; }
+  .card h3 { font-size: 14px; margin: 18px 0 6px; color: #334155; }
+  .summary { font-size: 14px; color: #475569; margin: 0 0 16px; }
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .metric {
+    border: 1px solid #eef2f7; border-radius: 10px; padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 4px; background: #f8fafc;
+  }
+  .metric-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #94a3b8; }
+  .metric-value { font-size: 18px; font-weight: 700; }
   .score-row { margin-bottom: 14px; }
   .score-head { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
   .score-title { font-weight: 600; }
@@ -317,21 +484,34 @@ export function buildAssessmentReportHtml(
   }
   .pill-high { background: #fee2e2; color: #b91c1c; }
   .pill-medium { background: #fef3c7; color: #92400e; }
-  .answers .answer {
+  .control-section { margin-bottom: 18px; }
+  .control {
     border: 1px solid #eef2f7;
     border-radius: 10px;
     padding: 12px 14px;
     margin-bottom: 10px;
   }
-  .answer-q { font-weight: 600; font-size: 13px; margin: 0 0 4px; }
-  .answer-a { font-size: 13px; margin: 0; }
+  .control-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .control-id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #4f46e5; }
+  .tag {
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
+    padding: 1px 7px; border-radius: 999px; background: #f1f5f9; color: #64748b;
+  }
+  .tag-required { background: #eef2ff; color: #4338ca; }
+  .control-q { font-weight: 600; font-size: 13px; margin: 0 0 4px; }
+  .control-a { font-size: 13px; margin: 0; }
+  .control-a-label { color: #64748b; font-weight: 600; }
   footer.report-footer { color: #94a3b8; font-size: 11px; text-align: center; margin-top: 24px; }
   @media print {
     body { background: #ffffff; }
     .toolbar { display: none; }
     .page { max-width: none; padding: 0; }
-    .card { break-inside: avoid; box-shadow: none; }
-    .answers .answer { break-inside: avoid; }
+    .cover {
+      border: none; border-radius: 0; min-height: calc(100vh - 32mm);
+      break-after: page; margin-bottom: 0;
+    }
+    .card { break-inside: avoid; border-radius: 0; border-left: none; border-right: none; }
+    .control, .control-section { break-inside: avoid; }
     @page { margin: 16mm; }
   }
 </style>
@@ -339,25 +519,12 @@ export function buildAssessmentReportHtml(
 <body>
   <div class="toolbar"><button type="button" onclick="window.print()">Save as PDF</button></div>
   <div class="page">
-    <header class="report-header">
-      <div>
-        <span class="badge">${isCustomer ? "Customer RFP" : "Internal"}</span>
-        <p class="eyebrow">${escapeHtml(input.frameworkName)}${versionLabel}</p>
-        <h1>${escapeHtml(reportTitle)}</h1>
-        <p class="meta">Completed ${escapeHtml(formatDate(completedAt))}</p>
-      </div>
-      <div class="score-badge">
-        <span class="num">${input.score}</span>
-        <span class="lbl">Score</span>
-      </div>
-    </header>
-
-    ${input.report?.summary ? `<section class="card"><p class="summary">${escapeHtml(input.report.summary)}</p></section>` : ""}
-    ${isCustomer && input.customerProfile ? renderCustomerProfile(input.customerProfile) : ""}
+    ${renderCoverPage(input)}
+    ${renderExecutiveSummary(input)}
     ${input.report ? renderSectionScores(input.report) : ""}
-    ${isCustomer && input.report ? renderRfpSummary(input.report) : ""}
-    ${renderAnswers(input.answerRows)}
-
+    ${input.assessmentMode === "customer" && input.report ? renderRfpSummary(input.report) : ""}
+    ${renderControlResults(input.sections)}
+    ${renderEvidenceReferences(input.sections)}
     <footer class="report-footer">Generated by AI Governance Assessor · ${escapeHtml(formatDate(input.generatedAt))}</footer>
   </div>
   ${autoPrintScript}
