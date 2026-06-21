@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CheckCircle2, RotateCcw } from "lucide-react";
 
+import { ExportMarkdownButton } from "@/components/assessment/export-markdown-button";
 import { RfpSummaryPanel } from "@/components/assessment/rfp-summary-panel";
 import type { AssessmentReport, CustomerProfile } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -82,12 +83,15 @@ export function ResultsPanel({
 
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
         {assessmentId ? (
-          <Button
-            nativeButton={false}
-            render={<Link href={`/assessments/${assessmentId}`} />}
-          >
-            View full report
-          </Button>
+          <>
+            <Button
+              nativeButton={false}
+              render={<Link href={`/assessments/${assessmentId}`} />}
+            >
+              View full report
+            </Button>
+            <ExportMarkdownButton assessmentId={assessmentId} />
+          </>
         ) : null}
         <Button nativeButton={false} render={<Link href="/" />}>
           <RotateCcw />

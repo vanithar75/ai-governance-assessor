@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Calendar, CheckCircle2, GitCompareArrows } from "lucide-react";
 
-import { SiteHeader } from "@/components/dashboard/site-header";
+import { ExportMarkdownButton } from "@/components/assessment/export-markdown-button";
 import { RfpSummaryPanel } from "@/components/assessment/rfp-summary-panel";
+import { SiteHeader } from "@/components/dashboard/site-header";
 import { Button } from "@/components/ui/button";
 import { fetchRelatedControlsForVersion } from "@/lib/control-mappings";
 import { parseFramework } from "@/lib/frameworks";
@@ -162,14 +163,17 @@ export default async function AssessmentDetailPage({
                 </div>
               </div>
 
-              <div className="flex size-24 shrink-0 items-center justify-center rounded-full border-4 border-primary/20 bg-background">
-                <div className="text-center">
-                  <p className="text-3xl font-bold text-foreground">
-                    {assessment.score ?? 0}
-                  </p>
-                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                    Score
-                  </p>
+              <div className="flex flex-col items-end gap-3">
+                <ExportMarkdownButton assessmentId={assessment.id} />
+                <div className="flex size-24 shrink-0 items-center justify-center rounded-full border-4 border-primary/20 bg-background">
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-foreground">
+                      {assessment.score ?? 0}
+                    </p>
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Score
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
