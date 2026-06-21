@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Calendar, CheckCircle2, GitCompareArrows } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  CheckCircle2,
+  Download,
+  GitCompareArrows,
+} from "lucide-react";
 
 import { ExportMarkdownButton } from "@/components/assessment/export-markdown-button";
 import { RfpSummaryPanel } from "@/components/assessment/rfp-summary-panel";
@@ -86,7 +92,7 @@ export default async function AssessmentDetailPage({
   const customerProfile = assessment.customer_profile as CustomerProfile | null;
   const isCustomerMode = assessmentMode === "customer";
 
-  let questionsById = new Map<string, FrameworkQuestion>();
+  const questionsById = new Map<string, FrameworkQuestion>();
   let relatedControls: Awaited<
     ReturnType<typeof fetchRelatedControlsForVersion>
   > = [];
@@ -126,15 +132,32 @@ export default async function AssessmentDetailPage({
       <SiteHeader userEmail={user.email} showBack />
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
         <div className="mb-8 space-y-4">
-          <Button
-            variant="outline"
-            size="sm"
-            nativeButton={false}
-            render={<Link href="/" />}
-          >
-            <ArrowLeft />
-            Back to dashboard
-          </Button>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              render={<Link href="/" />}
+            >
+              <ArrowLeft />
+              Back to dashboard
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              nativeButton={false}
+              render={
+                <a
+                  href={`/assessments/${id}/report?print=1`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
+            >
+              <Download />
+              Download PDF
+            </Button>
+          </div>
 
           <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
